@@ -22,6 +22,7 @@ import { fetchDeezerTrackMetadata } from "@/lib/deezer";
 import { fetchBestAudio } from "@/lib/audio-sources";
 import { fetchLyrics } from "@/lib/lyrics";
 import { rateLimit } from "@/lib/ratelimit";
+import { incrementDownloads } from "@/lib/counter";
 
 const execFileAsync = promisify(execFile);
 
@@ -122,8 +123,8 @@ export async function POST(request: NextRequest) {
         track = await getTrackInfo(url);
       } catch (e) {
         const msg = e instanceof Error ? e.message : "";
-        if (msg.includes("rate limited")) {
-          console.log("[download] Spotify rate limited, trying fallbacks");
+        {
+          console.log("[download] Spotify failed, trying fallbacks:", msg);
           // Strategy 1: song.link -> Deezer metadata (rate limited to ~8/min)
           const resolved = await resolveToSpotify(url);
           if (resolved?.deezerId) {
@@ -175,9 +176,7 @@ export async function POST(request: NextRequest) {
               console.log("[download] oEmbed fallback failed:", oembedErr);
             }
           }
-          if (!track) throw new Error("Spotify is temporarily rate limited — please try again in a few minutes");
-        } else {
-          throw e;
+          if (!track) throw new Error("couldn't find this track — try again in a few minutes");
         }
       }
     }
@@ -417,6 +416,7 @@ export async function POST(request: NextRequest) {
       responseHeaders["X-Audio-Verify-Confidence"] = String(audio.verification.confidence);
     }
 
+    incrementDownloads().catch(() => {});
     return new NextResponse(new Uint8Array(finalBuffer), { headers: responseHeaders });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Download failed";

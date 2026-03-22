@@ -1,9 +1,32 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import MigrationBanner from "@/components/MigrationBanner";
 
 const formats = ["flac", "alac", "mp3"];
+
+function useDownloadCount() {
+  const [count, setCount] = useState<number | null>(null);
+  const refresh = useCallback(() => {
+    fetch("/api/stats")
+      .then((r) => r.json())
+      .then((d) => setCount(d.downloads))
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
+    refresh();
+    const id = setInterval(refresh, 15_000);
+    return () => clearInterval(id);
+  }, [refresh]);
+  return count;
+}
+
+function formatCount(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "m";
+  if (n >= 1_000) return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "k";
+  return n.toLocaleString();
+}
 
 const steps = [
   { num: "01", text: "paste a spotify link" },
@@ -15,6 +38,7 @@ const steps = [
 export default function LandingPage() {
   const [formatIndex, setFormatIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const downloadCount = useDownloadCount();
   useEffect(() => {
     const interval = setInterval(() => {
       setIsAnimating(true);
@@ -28,6 +52,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-grid">
+      <MigrationBanner />
       {/* Nav */}
       <nav className="border-b border-surface0/60 px-6 py-4 flex items-center justify-between backdrop-blur-sm bg-base/80 sticky top-0 z-10">
         <div className="flex items-center gap-3">
@@ -90,6 +115,12 @@ export default function LandingPage() {
               local files setup
             </Link>
           </div>
+          {downloadCount !== null && downloadCount > 0 && (
+            <p className="text-xs text-overlay0/60 tabular-nums animate-fade-in" style={{ opacity: 0 }}>
+              ~<span className="text-lavender/70 font-bold">{formatCount(downloadCount)}</span>{" "}
+              tracks served
+            </p>
+          )}
         </div>
       </section>
 
@@ -188,7 +219,7 @@ export default function LandingPage() {
               think it&apos;s cool, a small tip helps cover server costs.
             </p>
             <a
-              href="https://chasefrazier.dev/tip"
+              href="https://yoinkify.com/tip"
               target="_blank"
               rel="noopener noreferrer"
               className="btn-press inline-block text-sm text-peach border border-peach/30 hover:bg-peach/10 px-6 py-3 rounded-lg font-bold uppercase tracking-wider transition-all duration-200"
@@ -258,8 +289,8 @@ export default function LandingPage() {
           <p>
             if you believe that your copyrighted work is being used in a way
             that constitutes infringement, please contact us at{" "}
-            <a href="mailto:dmca@yoinkify.lol" className="underline hover:text-overlay0/60">
-              dmca@yoinkify.lol
+            <a href="mailto:dmca@yoinkify.com" className="underline hover:text-overlay0/60">
+              dmca@yoinkify.com
             </a>{" "}
             and we will promptly address any valid concerns.
           </p>

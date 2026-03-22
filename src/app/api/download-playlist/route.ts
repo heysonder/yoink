@@ -10,6 +10,7 @@ import { lookupItunesGenre, lookupItunesCatalogIds } from "@/lib/itunes";
 import { fetchBestAudio } from "@/lib/audio-sources";
 import { fetchLyrics } from "@/lib/lyrics";
 import { rateLimit } from "@/lib/ratelimit";
+import { incrementDownloads } from "@/lib/counter";
 import { setExplicitTag } from "@/lib/mp4-advisory";
 import { ffmpegSemaphore } from "@/lib/semaphore";
 import { setCatalogIds } from "@/lib/mp4-catalog";
@@ -336,6 +337,8 @@ export async function POST(request: NextRequest) {
 
         const zipBuffer = zipSync(zipEntries, { level: 0 });
         const zipFilename = sanitizeFilename(playlist.name) + ".zip";
+
+        incrementDownloads(usedNames.size).catch(() => {});
 
         // Send zip metadata then binary
         send({ type: "zip", filename: zipFilename, size: zipBuffer.length });

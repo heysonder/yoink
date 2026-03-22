@@ -41,6 +41,9 @@ firebase-debug.log
 # claude
 CLAUDE.md
 
+# download counter
+.download-count
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
