@@ -2,7 +2,7 @@
 
 paste a spotify link. get the file.
 
-**[yoinkify.lol](https://yoinkify.lol)**
+**[yoinkify.lol](https://yoinkify.com)**
 
 ## features
 
