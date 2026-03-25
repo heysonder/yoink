@@ -2,7 +2,7 @@
 
 paste a spotify link. get the file.
 
-**[yoinkify.lol](https://yoinkify.com)**
+**[yoinkify.com](https://yoinkify.com)**
 
 ## features
 
@@ -77,7 +77,7 @@ you'll need [ffmpeg](https://ffmpeg.org/download.html) installed locally.
 
 ## attribution
 
-if you fork or self-host yoink, a "powered by [yoink](https://yoinkify.lol)" mention is appreciated but not required.
+if you fork or self-host yoink, a "powered by [yoink](https://yoinkify.com)" mention is appreciated but not required.
 
 ## license
 
