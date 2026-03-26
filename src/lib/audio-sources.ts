@@ -167,39 +167,23 @@ export async function fetchBestAudio(track: TrackInfo, preferFlac = false): Prom
   // Try Tidal first (hi-res capable, best quality)
   const tidalResult = await tryTidal(track, preferFlac);
   if (tidalResult) {
-    try {
-      tidalResult.qualityInfo = await analyzeAudio(tidalResult.buffer, tidalResult.format) ?? undefined;
-    } catch {
-      // never block download
-    }
+    // Skip ffprobe for Tidal — we already know format/bitrate from the API
     return tidalResult;
   }
 
   // Try Deezer second (CD lossless, no subscription cost)
   const deezerResult = await tryDeezer(track, preferFlac);
   if (deezerResult) {
-    try {
-      deezerResult.qualityInfo = await analyzeAudio(deezerResult.buffer, deezerResult.format) ?? undefined;
-    } catch {
-      // never block download
-    }
+    // Skip ffprobe for Deezer — we already know format/bitrate from the API
     return deezerResult;
   }
 
   // Fall back to YouTube (always WebM/Opus, no FLAC available)
   const ytResult = await tryYouTube(track);
 
-  // Quality scan + AcoustID verification for YouTube audio (non-blocking)
-  try {
-    const [quality, verification] = await Promise.all([
-      analyzeAudio(ytResult.buffer, ytResult.format).catch(() => null),
-      verifyTrack(ytResult.buffer, ytResult.format, track).catch(() => ({ verified: false, confidence: 0 })),
-    ]);
-    ytResult.qualityInfo = quality ?? undefined;
-    ytResult.verification = verification;
-  } catch {
-    // never block download
-  }
+  // Skip ffprobe and AcoustID for YouTube to reduce CPU usage.
+  // ffprobe quality info is not critical for YouTube (always webm/opus ~160kbps),
+  // and fpcalc (AcoustID) is very CPU-intensive.
 
   return ytResult;
 }

@@ -38,5 +38,5 @@ class Semaphore {
   }
 }
 
-// max 4 concurrent ffmpeg processes across all requests
-export const ffmpegSemaphore = new Semaphore(4);
+// max 2 concurrent ffmpeg processes across all requests (reduced from 4 to prevent CPU overload)
+export const ffmpegSemaphore = new Semaphore(2);

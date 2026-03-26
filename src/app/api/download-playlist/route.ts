@@ -14,6 +14,7 @@ import { incrementDownloads } from "@/lib/counter";
 import { setExplicitTag } from "@/lib/mp4-advisory";
 import { ffmpegSemaphore } from "@/lib/semaphore";
 import { setCatalogIds } from "@/lib/mp4-catalog";
+import { resolvePlaylist, resolveAlbum, resolveSpotifyTrack, searchDeezerStructured } from "@/lib/resolve-track";
 
 const execFileAsync = promisify(execFile);
 
@@ -26,6 +27,8 @@ const ALLOWED_ART_HOSTS = [
   "image-cdn-fa.spotifycdn.com",
   "mzstatic.com",
   "resources.tidal.com",
+  "e-cdns-images.dzcdn.net",
+  "cdns-images.dzcdn.net",
 ];
 
 function isAllowedUrl(url: string, allowedHosts: string[]): boolean {
@@ -247,14 +250,53 @@ export async function POST(request: NextRequest) {
     const MAX_TRACKS = 200;
 
     const urlType = detectUrlType(url);
-    let playlist: PlaylistInfo;
+    let playlist: PlaylistInfo | null = null;
+
+    // Try Spotify API first, fall back to embed scraping
     if (urlType === "album") {
-      playlist = await getAlbumInfo(url);
+      try { playlist = await getAlbumInfo(url); } catch (e) {
+        console.log("[playlist-dl] album API failed:", e instanceof Error ? e.message : e);
+        playlist = await resolveAlbum(url);
+      }
     } else if (urlType === "artist") {
-      playlist = await getArtistTopTracks(url);
+      try { playlist = await getArtistTopTracks(url); } catch (e) {
+        console.log("[playlist-dl] artist API failed:", e instanceof Error ? e.message : e);
+        // No embed fallback for artists
+      }
     } else {
-      playlist = await getPlaylistInfo(url);
+      try { playlist = await getPlaylistInfo(url); } catch (e) {
+        console.log("[playlist-dl] playlist API failed:", e instanceof Error ? e.message : e);
+        playlist = await resolvePlaylist(url);
+      }
     }
+
+    if (!playlist) {
+      return NextResponse.json({ error: "couldn't load this — Spotify API may require premium" }, { status: 503 });
+    }
+    // Enrich embed-scraped tracks (no ISRC/albumArt) with Deezer/iTunes metadata
+    // Only needed when tracks came from embed scraping (no ISRC = not from Spotify API)
+    const needsEnrichment = playlist.tracks.some(t => !t.isrc && !t.albumArt);
+    if (needsEnrichment) {
+      console.log("[playlist-dl] enriching", playlist.tracks.length, "scraped tracks with metadata");
+      const enriched = await Promise.all(
+        playlist.tracks.map(async (track) => {
+          if (track.isrc && track.albumArt) return track; // already has full metadata
+          try {
+            // Try resolving via the single-track resolver (Deezer search by artist+title)
+            if (track.spotifyUrl) {
+              const resolved = await resolveSpotifyTrack(track.spotifyUrl);
+              if (resolved) return { ...resolved, spotifyUrl: track.spotifyUrl };
+            }
+            // Fallback: Deezer structured search
+            const dz = await searchDeezerStructured(track.name, track.artist);
+            if (dz) return { ...dz, spotifyUrl: track.spotifyUrl };
+          } catch { /* keep original */ }
+          return track;
+        })
+      );
+      playlist.tracks = enriched;
+    }
+
     if (!playlist.tracks.length) {
       return NextResponse.json({ error: "Playlist has no tracks" }, { status: 400 });
     }
@@ -275,7 +317,7 @@ export async function POST(request: NextRequest) {
 
         send({ type: "start", total: playlist.tracks.length });
 
-        const CONCURRENCY = 5;
+        const CONCURRENCY = 2;
         const results: { filename: string; buffer: Buffer }[] = new Array(playlist.tracks.length);
         const errors: number[] = [];
 
