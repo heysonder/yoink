@@ -322,8 +322,27 @@ export async function POST(request: NextRequest) {
         send({ type: "start", total: playlist.tracks.length });
 
         const CONCURRENCY = 2;
+        const MAX_RETRIES = 2;
         const results: { filename: string; buffer: Buffer }[] = new Array(playlist.tracks.length);
         const errors: number[] = [];
+
+        const processWithRetry = async (track: typeof playlist.tracks[0], index: number) => {
+          let lastError: unknown;
+          for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+            try {
+              const result = await processTrack(track, requestedFormat, genreSource);
+              send({ type: "done", index });
+              return result;
+            } catch (err) {
+              lastError = err;
+              if (attempt < MAX_RETRIES) {
+                console.log(`[playlist] track ${index} attempt ${attempt + 1} failed, retrying...`);
+                await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+              }
+            }
+          }
+          throw lastError;
+        };
 
         for (let i = 0; i < playlist.tracks.length; i += CONCURRENCY) {
           const batch = playlist.tracks.slice(i, i + CONCURRENCY);
@@ -333,13 +352,7 @@ export async function POST(request: NextRequest) {
           send({ type: "batch", indices: batchIndices });
 
           const batchResults = await Promise.allSettled(
-            batch.map((track, j) =>
-              processTrack(track, requestedFormat, genreSource).then((result) => {
-                // Send progress as each individual track completes
-                send({ type: "done", index: i + j });
-                return result;
-              })
-            )
+            batch.map((track, j) => processWithRetry(track, i + j))
           );
 
           for (let j = 0; j < batchResults.length; j++) {
@@ -349,7 +362,7 @@ export async function POST(request: NextRequest) {
             } else {
               errors.push(i + j);
               send({ type: "error", index: i + j });
-              console.error(`[playlist] track ${i + j} failed:`, result.reason);
+              console.error(`[playlist] track ${i + j} failed after ${MAX_RETRIES + 1} attempts:`, result.reason);
             }
           }
         }
