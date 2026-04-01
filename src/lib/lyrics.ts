@@ -17,7 +17,7 @@ async function lrclibGet(path: string): Promise<string> {
   // If using a proxy, regular fetch should work fine
   if (process.env.LRCLIB_PROXY_URL) {
     const res = await fetch(url, {
-      headers: { "User-Agent": "yoink/1.0 (https://yoinkify.lol)" },
+      headers: { "User-Agent": "yoink/1.0 (https://yoinkify.com)" },
       signal: AbortSignal.timeout(20000),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

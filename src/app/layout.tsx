@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     "spotify hifi download",
     "yoink",
   ],
-  metadataBase: new URL("https://yoink.chasefrazier.dev"),
+  metadataBase: new URL("https://yoinkify.com"),
   alternates: {
     canonical: "/",
   },
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     siteName: "yoink",
     type: "website",
     locale: "en_US",
-    url: "https://yoink.chasefrazier.dev",
+    url: "https://yoinkify.com",
     images: [
       {
         url: "/og.png",
@@ -64,7 +64,7 @@ const jsonLd = JSON.stringify({
   "@context": "https://schema.org",
   "@type": "WebApplication",
   name: "yoink",
-  url: "https://yoink.chasefrazier.dev",
+  url: "https://yoinkify.com",
   description:
     "Download Spotify tracks and playlists in lossless FLAC, ALAC, or 320kbps MP3 with full metadata, album art, and lyrics.",
   applicationCategory: "MultimediaApplication",
@@ -103,7 +103,7 @@ export default function RootLayout({
         {children}
         <Script
           defer
-          src="https://umami-production-95b1.up.railway.app/script.js"
+          src="https://umami.yoinkify.com/script.js"
           data-website-id="eea5d900-bc1a-456f-a5c7-463d9afccb09"
         />
       </body>

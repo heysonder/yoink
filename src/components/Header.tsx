@@ -14,7 +14,7 @@ export default function Header() {
       <div className="flex items-center gap-4">
         <span className="text-xs text-overlay0 hidden sm:block">spotify downloader</span>
         <a
-          href="https://chasefrazier.dev/tip"
+          href="https://yoinkify.com/tip"
           target="_blank"
           rel="noopener noreferrer"
           className="text-xs text-overlay0 hover:text-peach transition-colors duration-200"

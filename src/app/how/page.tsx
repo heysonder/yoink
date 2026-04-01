@@ -524,7 +524,7 @@ export default function HowPage() {
         <div className="flex items-center gap-4">
           <Link href="/roadmap" className="hover:text-text transition-colors duration-200">roadmap</Link>
           <a
-            href="https://chasefrazier.dev/tip"
+            href="https://yoinkify.com/tip"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-peach transition-colors duration-200"

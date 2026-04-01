@@ -40,7 +40,7 @@ const sections: Section[] = [
     title: "DMCA & takedowns",
     content: [
       "yoink does not host, store, or cache any copyrighted audio files on its servers. all audio is fetched from third-party sources in real-time and delivered directly to you. nothing is retained after your request completes.",
-      "if you believe your copyrighted work is being accessed through yoink in a way that constitutes infringement, contact us at dmca@yoinkify.lol with details and we will promptly address valid concerns.",
+      "if you believe your copyrighted work is being accessed through yoink in a way that constitutes infringement, contact us at dmca@yoinkify.com with details and we will promptly address valid concerns.",
     ],
   },
   {
@@ -158,16 +158,16 @@ export default function TermsPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-6">
             <a
-              href="mailto:me@yoinkify.lol"
+              href="mailto:me@yoinkify.com"
               className="text-sm text-lavender hover:text-mauve transition-colors duration-200"
             >
-              me@yoinkify.lol
+              me@yoinkify.com
             </a>
             <a
-              href="mailto:dmca@yoinkify.lol"
+              href="mailto:dmca@yoinkify.com"
               className="text-sm text-overlay0 hover:text-text transition-colors duration-200"
             >
-              dmca@yoinkify.lol
+              dmca@yoinkify.com
             </a>
           </div>
         </div>
@@ -180,7 +180,7 @@ export default function TermsPage() {
           <Link href="/privacy" className="hover:text-text transition-colors duration-200">privacy</Link>
           <Link href="/roadmap" className="hover:text-text transition-colors duration-200">roadmap</Link>
           <a
-            href="https://chasefrazier.dev/tip"
+            href="https://yoinkify.com/tip"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-peach transition-colors duration-200"
