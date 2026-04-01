@@ -1,11 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchTracks } from "@/lib/spotify";
+import { searchTracks, type TrackInfo } from "@/lib/spotify";
 import { searchItunesTrack } from "@/lib/itunes";
+import { fetchDeezerTrackMetadata } from "@/lib/deezer";
 import { rateLimit } from "@/lib/ratelimit";
+import { getRequestSource } from "@/lib/request-source";
+
+async function searchDeezer(query: string, limit = 8): Promise<TrackInfo[]> {
+  const res = await fetch(
+    `https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=${limit}`,
+    { signal: AbortSignal.timeout(8000) }
+  );
+  if (!res.ok) return [];
+  const data = await res.json();
+  if (!data.data?.length) return [];
+
+  const results: TrackInfo[] = [];
+  for (const item of data.data) {
+    const meta = await fetchDeezerTrackMetadata(String(item.id));
+    if (meta) {
+      results.push({ ...meta, spotifyUrl: "", label: null, copyright: null } as TrackInfo);
+    }
+  }
+  return results;
+}
 
 export async function GET(request: NextRequest) {
   try {
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const source = getRequestSource(request);
     const { allowed, retryAfter } = rateLimit(`search:${ip}`, 15, 60_000);
     if (!allowed) {
       return NextResponse.json(
@@ -19,21 +41,31 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "query is required" }, { status: 400 });
     }
 
+    console.log(`[search] [${source}] ${ip} → "${q}"`);
+
+    // Try Spotify first
     try {
       const results = await searchTracks(q);
       return NextResponse.json({ results });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "";
-      if (msg.includes("rate limited")) {
-        console.log("[search] Spotify rate limited, falling back to iTunes");
-        const itunesResult = await searchItunesTrack("", q);
-        if (itunesResult) {
-          return NextResponse.json({ results: [itunesResult] });
-        }
-        return NextResponse.json({ error: "Search is temporarily limited — try again in a few minutes" }, { status: 503 });
-      }
-      throw e;
+      console.log("[search] Spotify failed, trying fallbacks:", e instanceof Error ? e.message : e);
     }
+
+    // Fallback: Deezer search (free, no auth)
+    const deezerResults = await searchDeezer(q);
+    if (deezerResults.length > 0) {
+      console.log("[search] got", deezerResults.length, "results from Deezer");
+      return NextResponse.json({ results: deezerResults });
+    }
+
+    // Fallback: iTunes search (pass full query as title — iTunes handles it well)
+    const itunesResult = await searchItunesTrack("", q);
+    if (itunesResult) {
+      console.log("[search] got result from iTunes:", itunesResult.artist, "-", itunesResult.name);
+      return NextResponse.json({ results: [itunesResult] });
+    }
+
+    return NextResponse.json({ error: "no results found" }, { status: 404 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Search failed";
     return NextResponse.json({ error: message }, { status: 500 });

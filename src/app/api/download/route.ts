@@ -11,18 +11,17 @@ import {
 } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
-import { getTrackInfo, detectPlatform, extractYouTubeId, type TrackInfo } from "@/lib/spotify";
+import { detectPlatform, extractYouTubeId, type TrackInfo } from "@/lib/spotify";
 import { setExplicitTag } from "@/lib/mp4-advisory";
 import { ffmpegSemaphore } from "@/lib/semaphore";
-import { getYouTubeTrackInfo } from "@/lib/youtube";
-import { resolveToSpotify } from "@/lib/songlink";
-import { extractAppleMusicTrackId, lookupByItunesId, lookupItunesGenre, lookupItunesCatalogIds } from "@/lib/itunes";
+import { lookupItunesGenre, lookupItunesCatalogIds } from "@/lib/itunes";
 import { setCatalogIds } from "@/lib/mp4-catalog";
-import { fetchDeezerTrackMetadata } from "@/lib/deezer";
 import { fetchBestAudio } from "@/lib/audio-sources";
 import { fetchLyrics } from "@/lib/lyrics";
 import { rateLimit } from "@/lib/ratelimit";
 import { incrementDownloads } from "@/lib/counter";
+import { resolveTrack } from "@/lib/resolve-track";
+import { getRequestSource } from "@/lib/request-source";
 
 const execFileAsync = promisify(execFile);
 
@@ -44,6 +43,8 @@ const ALLOWED_ART_HOSTS = [
   "image-cdn-fa.spotifycdn.com",
   "mzstatic.com",
   "resources.tidal.com",
+  "e-cdns-images.dzcdn.net",
+  "cdns-images.dzcdn.net",
 ];
 
 export async function POST(request: NextRequest) {
@@ -51,6 +52,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const source = getRequestSource(request);
     const { allowed, retryAfter } = rateLimit(`dl:${ip}`, 30, 60_000);
     if (!allowed) {
       return NextResponse.json(
@@ -69,6 +71,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "URL is required" }, { status: 400 });
     }
 
+    console.log(`[download] [${source}] ${ip} → ${url}${requestedFormat ? ` (${requestedFormat})` : ""}`);
+
     const platform = detectPlatform(url);
     if (!platform) {
       return NextResponse.json(
@@ -77,109 +81,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Step 1: Resolve to Spotify track info
-    let track;
-    let youtubeVideoId: string | null = null;
-
-    if (platform === "apple-music") {
-      const resolved = await resolveToSpotify(url);
-      if (resolved?.spotifyUrl) {
-        track = await getTrackInfo(resolved.spotifyUrl);
-      } else {
-        // Song.link failed — try iTunes Search API directly
-        const itunesId = extractAppleMusicTrackId(url);
-        if (itunesId) {
-          const itunesTrack = await lookupByItunesId(itunesId);
-          if (itunesTrack) {
-            track = itunesTrack;
-          }
-        }
-        if (!track) {
-          return NextResponse.json(
-            { error: "couldn't find this track — try a different link" },
-            { status: 404 }
-          );
-        }
-      }
-    } else if (platform === "youtube") {
-      youtubeVideoId = extractYouTubeId(url);
-      if (!youtubeVideoId) {
-        return NextResponse.json({ error: "invalid youtube link" }, { status: 400 });
-      }
-      // Try to find Spotify match for metadata + Deezer audio
-      const resolved = await resolveToSpotify(url);
-      if (resolved?.spotifyUrl) {
-        try {
-          track = await getTrackInfo(resolved.spotifyUrl);
-        } catch {
-          // Fall through to YouTube-only metadata
-        }
-      }
-      if (!track) {
-        track = await getYouTubeTrackInfo(youtubeVideoId);
-      }
-    } else {
-      try {
-        track = await getTrackInfo(url);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : "";
-        {
-          console.log("[download] Spotify failed, trying fallbacks:", msg);
-          // Strategy 1: song.link -> Deezer metadata (rate limited to ~8/min)
-          const resolved = await resolveToSpotify(url);
-          if (resolved?.deezerId) {
-            const dzMeta = await fetchDeezerTrackMetadata(resolved.deezerId);
-            if (dzMeta) {
-              console.log("[download] got metadata from Deezer via song.link:", dzMeta.name);
-              track = { ...dzMeta, spotifyUrl: url, label: null, copyright: null } as TrackInfo;
-            }
-          }
-          // Strategy 2: Spotify oEmbed (no auth, no rate limit) -> search Deezer/iTunes
-          if (!track) {
-            try {
-              const oembedRes = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`, {
-                signal: AbortSignal.timeout(5000),
-              });
-              if (oembedRes.ok) {
-                const oembed = await oembedRes.json();
-                const title = oembed.title;
-                if (title) {
-                  console.log("[download] got title from oEmbed:", title);
-                  // Search Deezer public API with title
-                  const dzSearchRes = await fetch(
-                    `https://api.deezer.com/2.0/search/track?q=${encodeURIComponent(title)}&limit=3`,
-                    { signal: AbortSignal.timeout(8000) }
-                  );
-                  if (dzSearchRes.ok) {
-                    const dzSearch = await dzSearchRes.json();
-                    const firstResult = dzSearch.data?.[0];
-                    if (firstResult) {
-                      const dzMeta = await fetchDeezerTrackMetadata(String(firstResult.id));
-                      if (dzMeta) {
-                        console.log("[download] got metadata from Deezer search:", dzMeta.artist, "-", dzMeta.name);
-                        track = { ...dzMeta, spotifyUrl: url, label: null, copyright: null } as TrackInfo;
-                      }
-                    }
-                  }
-                  // If Deezer search failed, try iTunes
-                  if (!track) {
-                    const { searchItunesTrack } = await import("@/lib/itunes");
-                    const itunesResult = await searchItunesTrack("", title);
-                    if (itunesResult) {
-                      console.log("[download] got metadata from iTunes search:", itunesResult.artist, "-", itunesResult.name);
-                      track = { ...itunesResult, spotifyUrl: url };
-                    }
-                  }
-                }
-              }
-            } catch (oembedErr) {
-              console.log("[download] oEmbed fallback failed:", oembedErr);
-            }
-          }
-          if (!track) throw new Error("couldn't find this track — try again in a few minutes");
-        }
-      }
+    // Step 1: Resolve track metadata via shared resolver
+    // (Spotify API → Song.link → oEmbed → Deezer/iTunes for Spotify tracks)
+    // (iTunes lookup by ID → Song.link → Deezer for Apple Music)
+    // (Piped → Song.link → Deezer/iTunes search for YouTube)
+    const resolved = await resolveTrack(url);
+    if (!resolved) {
+      return NextResponse.json(
+        { error: "couldn't find this track — try a different link" },
+        { status: 404 }
+      );
     }
+    let track = resolved.track;
+    const youtubeVideoId = resolved.youtubeVideoId || (platform === "youtube" ? extractYouTubeId(url) : null);
 
     // Override genre with iTunes if requested
     if (genreSource === "itunes") {

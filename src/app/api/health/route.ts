@@ -57,6 +57,13 @@ export async function GET() {
       });
       return res.ok;
     }),
+
+    check("deezer", async () => {
+      const res = await fetch("https://api.deezer.com/search?q=test&limit=1", {
+        signal: AbortSignal.timeout(5000),
+      });
+      return res.ok;
+    }),
   ]);
 
   const env = {

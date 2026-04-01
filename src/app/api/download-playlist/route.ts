@@ -15,6 +15,7 @@ import { setExplicitTag } from "@/lib/mp4-advisory";
 import { ffmpegSemaphore } from "@/lib/semaphore";
 import { setCatalogIds } from "@/lib/mp4-catalog";
 import { resolvePlaylist, resolveAlbum, resolveSpotifyTrack, searchDeezerStructured } from "@/lib/resolve-track";
+import { getRequestSource } from "@/lib/request-source";
 
 const execFileAsync = promisify(execFile);
 
@@ -232,6 +233,7 @@ function sanitizeFilename(name: string): string {
 export async function POST(request: NextRequest) {
   try {
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const source = getRequestSource(request);
     const { allowed, retryAfter } = rateLimit(`dl-playlist:${ip}`, 5, 60_000);
     if (!allowed) {
       return NextResponse.json(
@@ -242,6 +244,8 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { url, format: requestedFormat, genreSource } = body;
+
+    console.log(`[playlist-dl] [${source}] ${ip} → ${url}${requestedFormat ? ` (${requestedFormat})` : ""}`);
 
     if (!url || typeof url !== "string") {
       return NextResponse.json({ error: "URL is required" }, { status: 400 });

@@ -138,7 +138,11 @@ export async function getTrackInfo(url: string): Promise<TrackInfo> {
     headers: { Authorization: `Bearer ${token}` },
   });
 
-  if (!res.ok) throw new Error("Track not found");
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.log(`[spotify] track API error: ${res.status} ${res.statusText}`, body.slice(0, 200));
+    throw new Error(`Spotify API ${res.status}: ${res.statusText}`);
+  }
 
   const data = await res.json();
 
