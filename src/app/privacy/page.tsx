@@ -17,7 +17,7 @@ const sections: Section[] = [
   {
     title: "no accounts, minimal analytics",
     content: [
-      "yoink has no user accounts, no sign-ups, no cookies, and no ad trackers. we don't use google analytics, facebook pixel, or any invasive tracking service.",
+      "yoink has no user accounts, no sign-ups, and no cookies. we don't use google analytics, facebook pixel, or any invasive tracking service.",
       "we use umami for basic, anonymous usage analytics — page views and visit counts. umami is privacy-focused, doesn't use cookies, doesn't collect personal data, and is fully GDPR compliant. we use it to understand which pages get traffic, not to track individual users.",
       "we don't know who you are or what you download.",
     ],
@@ -189,10 +189,10 @@ export default function PrivacyPage() {
             concerns, reach out.
           </p>
           <a
-            href="mailto:me@yoinkify.lol"
+            href="mailto:me@yoinkify.com"
             className="text-sm text-lavender hover:text-mauve transition-colors duration-200 inline-block"
           >
-            me@yoinkify.lol
+            me@yoinkify.com
           </a>
         </div>
       </section>
@@ -204,7 +204,7 @@ export default function PrivacyPage() {
           <Link href="/terms" className="hover:text-text transition-colors duration-200">terms</Link>
           <Link href="/roadmap" className="hover:text-text transition-colors duration-200">roadmap</Link>
           <a
-            href="https://chasefrazier.dev/tip"
+            href="https://yoinkify.com/tip"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-peach transition-colors duration-200"

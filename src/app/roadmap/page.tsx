@@ -98,9 +98,15 @@ const items: RoadmapItem[] = [
   },
   {
     title: "open source",
-    description: "opening up the full yoink codebase. contribute features, run your own instance, or just read the code.",
-    status: "planned",
+    description: "full yoink codebase on github. contribute features, run your own instance, or just read the code.",
+    status: "shipped",
     tag: "core",
+  },
+  {
+    title: "metadata fallback chain",
+    description: "when spotify's api is unavailable, metadata is automatically sourced from deezer and itunes. no single point of failure.",
+    status: "shipped",
+    tag: "metadata",
   },
   {
     title: "additional link resolvers",
@@ -332,10 +338,10 @@ export default function RoadmapPage() {
             </p>
           </div>
           <a
-            href="mailto:me@yoinkify.lol"
+            href="mailto:me@yoinkify.com"
             className="btn-press text-sm text-lavender border border-lavender/30 hover:bg-lavender/10 px-6 py-3 rounded-lg font-bold uppercase tracking-wider transition-all duration-200 flex-shrink-0"
           >
-            me@yoinkify.lol
+            me@yoinkify.com
           </a>
         </div>
       </section>
@@ -347,7 +353,7 @@ export default function RoadmapPage() {
           <Link href="/how" className="text-mauve/60 hover:text-mauve transition-colors duration-200">local files</Link>
           <Link href="/players" className="text-green/60 hover:text-green transition-colors duration-200">players</Link>
           <a
-            href="https://chasefrazier.dev/tip"
+            href="https://yoinkify.com/tip"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-peach transition-colors duration-200"

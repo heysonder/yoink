@@ -5,6 +5,7 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import SpotifyInput from "@/components/SpotifyInput";
 import FormatToggle, { type Format } from "@/components/FormatToggle";
+import MigrationBanner from "@/components/MigrationBanner";
 
 interface TrackInfo {
   name: string;
@@ -290,6 +291,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col bg-grid">
+      <MigrationBanner />
       <Header />
 
       <main className="flex-1 flex flex-col items-center justify-center px-6 py-12">
@@ -380,10 +382,10 @@ export default function Home() {
                   try again
                 </button>
                 <a
-                  href="mailto:me@yoinkify.lol"
+                  href="mailto:me@yoinkify.com"
                   className="text-xs text-overlay0/50 hover:text-overlay0 transition-colors"
                 >
-                  me@yoinkify.lol
+                  me@yoinkify.com
                 </a>
               </div>
             </div>
@@ -623,6 +625,7 @@ export default function Home() {
               <span>to download</span>
             </div>
           )}
+
         </div>
       </main>
 
@@ -634,7 +637,7 @@ export default function Home() {
           <Link href="/how" className="text-mauve/60 hover:text-mauve transition-colors duration-200 sm:hidden">local files</Link>
           <Link href="/roadmap" className="hover:text-text transition-colors duration-200">roadmap</Link>
           <a
-            href="https://chasefrazier.dev/tip"
+            href="https://yoinkify.com/tip"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-peach transition-colors duration-200"
