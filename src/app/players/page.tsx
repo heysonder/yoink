@@ -383,7 +383,14 @@ export default function PlayersPage() {
           >
             tip jar
           </a>
-          <span>metadata included</span>
+          <a
+            href="https://github.com/heysonder/yoink"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-text transition-colors duration-200"
+          >
+            github
+          </a>
         </div>
       </footer>
     </div>

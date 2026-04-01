@@ -235,6 +235,14 @@ export default function LandingPage() {
             <Link href="/roadmap" className="hover:text-text transition-colors duration-200">roadmap</Link>
             <Link href="/terms" className="hover:text-text transition-colors duration-200">terms</Link>
             <Link href="/privacy" className="hover:text-text transition-colors duration-200">privacy</Link>
+            <a
+              href="https://github.com/heysonder/yoink"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-text transition-colors duration-200"
+            >
+              github
+            </a>
           </div>
         </div>
         <div className="space-y-3 text-[10px] text-overlay0/40 leading-relaxed">
