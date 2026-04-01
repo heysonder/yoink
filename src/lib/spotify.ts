@@ -221,7 +221,20 @@ export async function getPlaylistInfo(url: string): Promise<PlaylistInfo> {
 
   const data = await res.json();
 
-  const validItems = data.tracks.items.filter((item: { track: unknown }) => item.track);
+  // Paginate through all tracks (Spotify returns max 100 per page)
+  let allItems = data.tracks.items;
+  let nextUrl = data.tracks.next;
+  while (nextUrl) {
+    const pageRes = await spotifyFetch(nextUrl, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!pageRes.ok) break;
+    const page = await pageRes.json();
+    allItems = allItems.concat(page.items);
+    nextUrl = page.next;
+  }
+
+  const validItems = allItems.filter((item: { track: unknown }) => item.track);
 
   // Batch fetch artist genres (up to 50 per request)
   const genreMap = new Map<string, string>();
@@ -293,8 +306,21 @@ export async function getAlbumInfo(url: string): Promise<PlaylistInfo> {
 
   const data = await res.json();
 
+  // Paginate through all tracks (Spotify returns max 50 per page for albums)
+  let allItems = data.tracks.items;
+  let nextUrl = data.tracks.next;
+  while (nextUrl) {
+    const pageRes = await spotifyFetch(nextUrl, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!pageRes.ok) break;
+    const page = await pageRes.json();
+    allItems = allItems.concat(page.items);
+    nextUrl = page.next;
+  }
+
   // Album track items are track objects directly (not wrapped in {track})
-  const validItems = data.tracks.items.filter((item: { id: string }) => item.id);
+  const validItems = allItems.filter((item: { id: string }) => item.id);
 
   // Batch fetch artist genres
   const genreMap = new Map<string, string>();
