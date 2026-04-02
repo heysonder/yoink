@@ -80,8 +80,8 @@ export async function encodeInBrowser(
     });
 
     // Transfer buffers to worker (zero-copy)
-    const transferable: ArrayBuffer[] = [audio.buffer];
-    if (albumArt) transferable.push(albumArt.buffer);
+    const transferable: ArrayBuffer[] = [audio.buffer as ArrayBuffer];
+    if (albumArt) transferable.push(albumArt.buffer as ArrayBuffer);
 
     w.postMessage(
       { type: "encode", id, audio, albumArt, metadata, outputFormat },

@@ -146,7 +146,7 @@ export default function Home() {
 
         const extMap: Record<string, string> = { flac: "flac", alac: "m4a", mp3: "mp3" };
         const ext = extMap[format] || "mp3";
-        const blob = new Blob([encoded], { type: "application/octet-stream" });
+        const blob = new Blob([new Uint8Array(encoded)], { type: "application/octet-stream" });
         const downloadUrl = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = downloadUrl;
@@ -383,7 +383,7 @@ export default function Home() {
 
         const zipBuffer = zipSync(zipEntries, { level: 0 });
         const zipFilename = (playlist.name.replace(/[/\\:*?"<>|]/g, "_")) + ".zip";
-        const zipBlob = new Blob([zipBuffer], { type: "application/zip" });
+        const zipBlob = new Blob([new Uint8Array(zipBuffer)], { type: "application/zip" });
         const downloadUrl = URL.createObjectURL(zipBlob);
         const a = document.createElement("a");
         a.href = downloadUrl;

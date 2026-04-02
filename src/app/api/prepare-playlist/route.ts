@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPlaylistInfo, getAlbumInfo, getArtistTopTracks, detectUrlType, type TrackInfo, type PlaylistInfo } from "@/lib/spotify";
-import { lookupItunesCatalogIds } from "@/lib/itunes";
+import { lookupItunesGenre, lookupItunesCatalogIds } from "@/lib/itunes";
 import { fetchBestAudio } from "@/lib/audio-sources";
 import { fetchLyrics } from "@/lib/lyrics";
 import { rateLimit } from "@/lib/ratelimit";
@@ -30,34 +30,39 @@ function isAllowedUrl(url: string, allowedHosts: string[]): boolean {
   }
 }
 
-function stripTimestamps(lyrics: string): string {
-  // Remove LRC-style timestamps like [00:12.34] or [00:12]
-  return lyrics.replace(/\[\d{2}:\d{2}(?:\.\d+)?\]/g, "").trim();
-}
+async function prepareTrack(
+  track: TrackInfo,
+  requestedFormat: string | undefined,
+  genreSource?: string,
+): Promise<Buffer> {
+  const preferLossless = requestedFormat === "flac" || requestedFormat === "alac";
 
-async function prepareTrack(track: TrackInfo): Promise<Buffer> {
-  const [audio, lyricsRaw, catalogIds] = await Promise.all([
-    fetchBestAudio(track, false),
+  if (genreSource === "itunes") {
+    const itunesGenre = await lookupItunesGenre(track);
+    if (itunesGenre) track.genre = itunesGenre;
+  }
+
+  const [audio, lyrics, catalogIds] = await Promise.all([
+    fetchBestAudio(track, preferLossless),
     fetchLyrics(track.artist, track.name),
     lookupItunesCatalogIds(track),
   ]);
 
-  let artBuffer: Buffer | undefined;
+  let artBuffer: Buffer | null = null;
   if (track.albumArt && isAllowedUrl(track.albumArt, ALLOWED_ART_HOSTS)) {
     try {
       const artRes = await fetch(track.albumArt);
       if (artRes.ok) {
         artBuffer = Buffer.from(await artRes.arrayBuffer());
       }
-    } catch {
-      // Skip album art on failure
-    }
+    } catch {}
   }
 
-  const lyrics = lyricsRaw ? stripTimestamps(lyricsRaw) : undefined;
+  const plainLyrics = lyrics
+    ? lyrics.replace(/^\[[\d:.]+\]\s*/gm, "").trim()
+    : null;
 
-  const metadata = buildEnvelopeMetadata(track, audio, catalogIds ?? undefined, lyrics);
-
+  const metadata = buildEnvelopeMetadata(track, audio, plainLyrics, catalogIds);
   return packEnvelope(metadata, audio.buffer, artBuffer);
 }
 
@@ -74,7 +79,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { url } = body;
+    const { url, format: requestedFormat, genreSource } = body;
 
     console.log(`[prepare-playlist] [${source}] ${ip} → ${url}`);
 
@@ -151,11 +156,11 @@ export async function POST(request: NextRequest) {
         const CONCURRENCY = 2;
         const MAX_RETRIES = 2;
 
-        const prepareWithRetry = async (track: typeof playlist!.tracks[0], index: number): Promise<Buffer> => {
+        const prepareWithRetry = async (track: TrackInfo, index: number): Promise<Buffer> => {
           let lastError: unknown;
           for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
             try {
-              return await prepareTrack(track);
+              return await prepareTrack(track, requestedFormat, genreSource);
             } catch (err) {
               lastError = err;
               if (attempt < MAX_RETRIES) {
