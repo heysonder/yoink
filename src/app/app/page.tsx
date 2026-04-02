@@ -157,7 +157,7 @@ export default function Home() {
         URL.revokeObjectURL(downloadUrl);
         setDownloadPhase("");
 
-        const qualityLabel = (format === "flac" || format === "alac") && metadata.sourceFormat === "flac"
+        const qualityLabel = metadata.sourceBitrate === 0 || ((format === "flac" || format === "alac") && metadata.sourceFormat === "flac")
           ? "lossless"
           : `${metadata.sourceBitrate}`;
         return { source: audioSource, bitrate: qualityLabel };
