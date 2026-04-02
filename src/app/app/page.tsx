@@ -157,9 +157,12 @@ export default function Home() {
         URL.revokeObjectURL(downloadUrl);
         setDownloadPhase("");
 
-        const qualityLabel = metadata.sourceBitrate === 0 || ((format === "flac" || format === "alac") && metadata.sourceFormat === "flac")
+        const isLosslessOutput = (format === "flac" || format === "alac") && metadata.sourceFormat === "flac";
+        const qualityLabel = isLosslessOutput
           ? "lossless"
-          : `${metadata.sourceBitrate}`;
+          : format === "mp3"
+            ? "320"
+            : `${metadata.sourceBitrate}`;
         return { source: audioSource, bitrate: qualityLabel };
       } catch (err) {
         console.warn("[client-ffmpeg] failed, falling back to server:", err);

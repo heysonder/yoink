@@ -4,7 +4,7 @@ import { lookupItunesGenre, lookupItunesCatalogIds } from "@/lib/itunes";
 import { fetchBestAudio } from "@/lib/audio-sources";
 import { fetchLyrics } from "@/lib/lyrics";
 import { rateLimit } from "@/lib/ratelimit";
-import { resolveTrack } from "@/lib/resolve-track";
+import { resolveTrack, getCached } from "@/lib/resolve-track";
 import { getRequestSource } from "@/lib/request-source";
 import { buildEnvelopeMetadata, packEnvelope } from "@/lib/envelope";
 
@@ -62,14 +62,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const resolved = await resolveTrack(url);
-    if (!resolved) {
-      return NextResponse.json(
-        { error: "couldn't find this track — try a different link" },
-        { status: 404 }
-      );
+    // Use cached metadata from /api/metadata if available (same art + info the card showed)
+    const cached = getCached(url);
+    let track;
+    if (cached) {
+      track = cached;
+    } else {
+      const resolved = await resolveTrack(url);
+      if (!resolved) {
+        return NextResponse.json(
+          { error: "couldn't find this track — try a different link" },
+          { status: 404 }
+        );
+      }
+      track = resolved.track;
     }
-    let track = resolved.track;
 
     if (genreSource === "itunes") {
       const itunesGenre = await lookupItunesGenre(track);
