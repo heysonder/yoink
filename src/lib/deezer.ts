@@ -1,7 +1,7 @@
 import { createHash } from "crypto";
 import type { TrackInfo } from "./spotify";
 
-const DEEZER_MASTER_KEY = "g4el58wc0zvf9na1";
+const DEEZER_MASTER_KEY = process.env.DEEZER_MASTER_KEY!;
 
 // Blowfish implementation (OpenSSL 3.x dropped legacy cipher support)
 // Only used for 2048-byte chunk decryption — performance is fine in pure JS
