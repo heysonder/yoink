@@ -101,4 +101,8 @@ if you fork or self-host yoink, a "powered by [yoink](https://yoinkify.com)" men
 
 ## license
 
-[AGPL-3.0](LICENSE)
+this project uses [AGPL-3.0](LICENSE) with the [commons clause](https://commonsclause.com).
+
+you can use, modify, and self-host yoink freely — but any modifications you deploy must be open sourced under the same license, and you may not sell or commercially monetize the software without a separate agreement.
+
+for commercial licensing, contact me@yoinkify.com 
