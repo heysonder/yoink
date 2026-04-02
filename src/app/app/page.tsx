@@ -6,6 +6,9 @@ import Header from "@/components/Header";
 import SpotifyInput from "@/components/SpotifyInput";
 import FormatToggle, { type Format } from "@/components/FormatToggle";
 import MigrationBanner from "@/components/MigrationBanner";
+import { unpackEnvelope } from "@/lib/client/envelope";
+import { encodeInBrowser, canUseClientFFmpeg, type FFmpegStatus } from "@/lib/client/ffmpeg-bridge";
+import { zipSync } from "fflate";
 
 interface TrackInfo {
   name: string;
@@ -43,6 +46,7 @@ export default function Home() {
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [quality, setQuality] = useState<QualityInfo | null>(null);
   const [format, setFormat] = useState<Format>("mp3");
+  const [downloadPhase, setDownloadPhase] = useState<string>("");
   const [genreSource, setGenreSource] = useState<"spotify" | "itunes">("spotify");
   const abortRef = useRef(false);
   const downloadTriggeredRef = useRef(false);
@@ -103,8 +107,72 @@ export default function Home() {
   };
 
   const downloadTrack = useCallback(async (trackInfo: TrackInfo): Promise<QualityInfo | false> => {
+    const trackUrl = trackInfo.spotifyUrl || originalUrl;
+    const useClient = canUseClientFFmpeg();
+
+    if (useClient) {
+      try {
+        setDownloadPhase("Fetching audio...");
+        const res = await fetch("/api/prepare", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: trackUrl, format, genreSource }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          if (data.rateLimit) setIsRateLimited(true);
+          throw new Error(data.error || "Download failed");
+        }
+
+        const audioSource = res.headers.get("X-Audio-Source") || "unknown";
+        const envelope = await res.arrayBuffer();
+        const { metadata, albumArt, audio } = unpackEnvelope(envelope);
+
+        setDownloadPhase("Converting...");
+        const encoded = await encodeInBrowser(
+          audio,
+          albumArt,
+          metadata,
+          format as "mp3" | "flac" | "alac",
+          (status: FFmpegStatus) => {
+            if (status.type === "progress") {
+              setDownloadPhase(`Converting... ${status.percent}%`);
+            } else if (status.type === "loading") {
+              setDownloadPhase("Loading encoder...");
+            }
+          },
+        );
+
+        const extMap: Record<string, string> = { flac: "flac", alac: "m4a", mp3: "mp3" };
+        const ext = extMap[format] || "mp3";
+        const blob = new Blob([new Uint8Array(encoded)], { type: "application/octet-stream" });
+        const downloadUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.download = `${trackInfo.artist} - ${trackInfo.name}.${ext}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(downloadUrl);
+        setDownloadPhase("");
+
+        const isLosslessOutput = (format === "flac" || format === "alac") && metadata.sourceFormat === "flac";
+        const qualityLabel = isLosslessOutput
+          ? "lossless"
+          : format === "mp3"
+            ? "320"
+            : `${metadata.sourceBitrate}`;
+        return { source: audioSource, bitrate: qualityLabel };
+      } catch (err) {
+        console.warn("[client-ffmpeg] failed, falling back to server:", err);
+        setDownloadPhase("Converting on server...");
+      }
+    }
+
+    // Server-side fallback
     try {
-      const trackUrl = trackInfo.spotifyUrl || originalUrl;
+      if (!useClient) setDownloadPhase("");
       const res = await fetch("/api/download", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -132,8 +200,10 @@ export default function Home() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(downloadUrl);
+      setDownloadPhase("");
       return { source: audioSource, bitrate: audioBitrate };
     } catch {
+      setDownloadPhase("");
       return false;
     }
   }, [format, genreSource, originalUrl]);
@@ -158,10 +228,184 @@ export default function Home() {
     if (!playlist) return;
     setState("downloading");
     abortRef.current = false;
-
-    // Mark all tracks as pending
     setTrackStatuses(new Array(playlist.tracks.length).fill("pending"));
 
+    const useClient = canUseClientFFmpeg();
+
+    if (useClient) {
+      try {
+        const res = await fetch("/api/prepare-playlist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: originalUrl, format, genreSource }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Playlist download failed");
+        }
+
+        const reader = res.body!.getReader();
+        let byteBuffer = new Uint8Array(0);
+        const encodedFiles: { name: string; data: Uint8Array }[] = [];
+        let expectingBinary = 0;
+        let currentTrackIndex = -1;
+
+        const processEnvelope = async (envelopeBuffer: ArrayBuffer, index: number) => {
+          const { metadata, albumArt, audio } = unpackEnvelope(envelopeBuffer);
+          try {
+            const encoded = await encodeInBrowser(
+              audio, albumArt, metadata,
+              format as "mp3" | "flac" | "alac",
+              undefined,
+              120_000,
+            );
+
+            const extMap: Record<string, string> = { flac: "flac", alac: "m4a", mp3: "mp3" };
+            const ext = extMap[format] || "mp3";
+            const name = `${metadata.artist} - ${metadata.title}.${ext}`.replace(/[/\\:*?"<>|]/g, "_");
+            encodedFiles.push({ name, data: new Uint8Array(encoded) });
+
+            setTrackStatuses((prev) => {
+              const next = [...prev];
+              next[index] = "done";
+              return next;
+            });
+          } catch (err) {
+            console.warn(`[client-ffmpeg] track ${index} failed, trying server fallback:`, err);
+            try {
+              const track = playlist.tracks[index];
+              const trackUrl = track.spotifyUrl || originalUrl;
+              const fallbackRes = await fetch("/api/download", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url: trackUrl, format, genreSource }),
+              });
+              if (fallbackRes.ok) {
+                const audioFormat = fallbackRes.headers.get("X-Audio-Format") || "mp3";
+                const extMap: Record<string, string> = { flac: "flac", m4a: "m4a", alac: "m4a", mp3: "mp3" };
+                const ext = extMap[audioFormat] || audioFormat;
+                const blob = await fallbackRes.blob();
+                const name = `${track.artist} - ${track.name}.${ext}`.replace(/[/\\:*?"<>|]/g, "_");
+                encodedFiles.push({ name, data: new Uint8Array(await blob.arrayBuffer()) });
+                setTrackStatuses((prev) => {
+                  const next = [...prev];
+                  next[index] = "done";
+                  return next;
+                });
+                return;
+              }
+            } catch {}
+            setTrackStatuses((prev) => {
+              const next = [...prev];
+              next[index] = "error";
+              return next;
+            });
+          }
+        };
+
+        let encodeChain = Promise.resolve();
+
+        const handleEvent = (event: Record<string, unknown>) => {
+          if (event.type === "batch") {
+            setTrackStatuses((prev) => {
+              const next = [...prev];
+              for (const idx of event.indices as number[]) next[idx] = "downloading";
+              return next;
+            });
+          } else if (event.type === "track") {
+            currentTrackIndex = event.index as number;
+            expectingBinary = event.size as number;
+          } else if (event.type === "error") {
+            setTrackStatuses((prev) => {
+              const next = [...prev];
+              next[event.index as number] = "error";
+              return next;
+            });
+          }
+        };
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const combined = new Uint8Array(byteBuffer.length + value.length);
+          combined.set(byteBuffer);
+          combined.set(value, byteBuffer.length);
+          byteBuffer = combined;
+
+          while (expectingBinary > 0 && byteBuffer.length >= expectingBinary) {
+            const envelopeBytes = byteBuffer.slice(0, expectingBinary).buffer;
+            byteBuffer = byteBuffer.slice(expectingBinary);
+            expectingBinary = 0;
+
+            const idx = currentTrackIndex;
+            encodeChain = encodeChain.then(() => processEnvelope(envelopeBytes, idx));
+          }
+
+          if (expectingBinary > 0) continue;
+
+          while (true) {
+            const newlineIdx = byteBuffer.indexOf(0x0A);
+            if (newlineIdx === -1) break;
+
+            const lineBytes = byteBuffer.slice(0, newlineIdx);
+            byteBuffer = byteBuffer.slice(newlineIdx + 1);
+
+            const line = new TextDecoder().decode(lineBytes).trim();
+            if (!line) continue;
+
+            try {
+              const event = JSON.parse(line);
+              handleEvent(event);
+            } catch {}
+          }
+        }
+
+        await encodeChain;
+
+        if (encodedFiles.length === 0) {
+          throw new Error("All tracks failed to download");
+        }
+
+        const zipEntries: Record<string, Uint8Array> = {};
+        const usedNames = new Set<string>();
+        for (const file of encodedFiles) {
+          let name = file.name;
+          if (usedNames.has(name)) {
+            const ext = name.lastIndexOf(".");
+            const base = name.slice(0, ext);
+            const extStr = name.slice(ext);
+            let counter = 2;
+            while (usedNames.has(`${base} (${counter})${extStr}`)) counter++;
+            name = `${base} (${counter})${extStr}`;
+          }
+          usedNames.add(name);
+          zipEntries[name] = file.data;
+        }
+
+        const zipBuffer = zipSync(zipEntries, { level: 0 });
+        const zipFilename = (playlist.name.replace(/[/\\:*?"<>|]/g, "_")) + ".zip";
+        const zipBlob = new Blob([new Uint8Array(zipBuffer)], { type: "application/zip" });
+        const downloadUrl = URL.createObjectURL(zipBlob);
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.download = zipFilename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(downloadUrl);
+
+        setState("done");
+        setTimeout(() => setState("ready"), 3000);
+        return;
+      } catch (err) {
+        console.warn("[client-ffmpeg] playlist failed entirely, falling back to server:", err);
+        setTrackStatuses(new Array(playlist.tracks.length).fill("pending"));
+      }
+    }
+
+    // Server-side fallback — keep existing logic exactly as-is
     try {
       const res = await fetch("/api/download-playlist", {
         method: "POST",
@@ -216,13 +460,11 @@ export default function Home() {
           continue;
         }
 
-        // Process at byte level to avoid TextDecoder corrupting binary data
         const combined = new Uint8Array(byteBuffer.length + value.length);
         combined.set(byteBuffer);
         combined.set(value, byteBuffer.length);
         byteBuffer = combined;
 
-        // Parse complete lines (newline = 0x0A)
         while (true) {
           const newlineIdx = byteBuffer.indexOf(0x0A);
           if (newlineIdx === -1) break;
@@ -237,19 +479,15 @@ export default function Home() {
             const event = JSON.parse(line);
             handleEvent(event);
 
-            // After zip event, remaining buffer is binary zip data
             if (zipStarted && byteBuffer.length > 0) {
               zipChunks.push(byteBuffer);
               byteBuffer = new Uint8Array(0);
               break;
             }
-          } catch {
-            // Skip malformed lines
-          }
+          } catch {}
         }
       }
 
-      // Assemble zip and trigger download
       const totalSize = zipChunks.reduce((sum, c) => sum + c.length, 0);
       const zipArray = new Uint8Array(totalSize);
       let offset = 0;
@@ -470,7 +708,7 @@ export default function Home() {
                         <span className="loading-dot w-1 h-1 rounded-full bg-lavender/70" />
                         <span className="loading-dot w-1 h-1 rounded-full bg-lavender/70" />
                       </span>
-                      downloading
+                      {downloadPhase || "downloading"}
                     </span>
                   )}
                   {state === "done" && "downloaded"}
