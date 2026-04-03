@@ -299,7 +299,7 @@ export default function FeedbackForm() {
             onClick={() => fileInputRef.current?.click()}
             className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-200 ${
               dragOver
-                ? "border-lavender bg-lavender/5"
+                ? "border-lavender bg-lavender/10"
                 : "border-surface0 hover:border-surface2 hover:bg-surface0/20"
             }`}
           >
@@ -330,9 +330,9 @@ export default function FeedbackForm() {
       >
         {submitting ? (
           <span className="flex items-center justify-center gap-1">
-            <span className="loading-dot w-1.5 h-1.5 rounded-full bg-overlay0 inline-block" />
-            <span className="loading-dot w-1.5 h-1.5 rounded-full bg-overlay0 inline-block" />
-            <span className="loading-dot w-1.5 h-1.5 rounded-full bg-overlay0 inline-block" />
+            <span className="loading-dot w-1.5 h-1.5 rounded-full bg-crust inline-block" />
+            <span className="loading-dot w-1.5 h-1.5 rounded-full bg-crust inline-block" />
+            <span className="loading-dot w-1.5 h-1.5 rounded-full bg-crust inline-block" />
           </span>
         ) : (
           "submit"
