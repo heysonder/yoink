@@ -79,12 +79,16 @@ export async function encodeInBrowser(
       }
     });
 
-    // Transfer buffers to worker (zero-copy)
-    const transferable: ArrayBuffer[] = [audio.buffer as ArrayBuffer];
-    if (albumArt) transferable.push(albumArt.buffer as ArrayBuffer);
+    // Copy typed arrays so each has its own backing ArrayBuffer —
+    // audio and albumArt may share the same buffer (from unpackEnvelope),
+    // and postMessage throws DataCloneError if the same buffer is transferred twice.
+    const audioCopy = audio.slice();
+    const artCopy = albumArt ? albumArt.slice() : null;
+    const transferable: ArrayBuffer[] = [audioCopy.buffer as ArrayBuffer];
+    if (artCopy) transferable.push(artCopy.buffer as ArrayBuffer);
 
     w.postMessage(
-      { type: "encode", id, audio, albumArt, metadata, outputFormat },
+      { type: "encode", id, audio: audioCopy, albumArt: artCopy, metadata, outputFormat },
       transferable,
     );
   });

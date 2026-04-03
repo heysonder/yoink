@@ -8,7 +8,6 @@
  */
 
 import { FFmpeg } from "@ffmpeg/ffmpeg";
-import { fetchFile } from "@ffmpeg/util";
 import type { EnvelopeMetadata } from "./envelope";
 
 // ─── FFmpeg singleton ────────────────────────────────────────────────────────
@@ -407,10 +406,9 @@ self.onmessage = async (event: MessageEvent<EncodeMessage>) => {
     }
 
     // Transfer buffer to main thread (zero-copy)
-    const transferable = result.buffer;
     (self as unknown as Worker).postMessage(
-      { type: "complete", id, buffer: transferable },
-      [transferable],
+      { type: "complete", id, buffer: result },
+      [result.buffer as ArrayBuffer],
     );
   } catch (err) {
     const message =

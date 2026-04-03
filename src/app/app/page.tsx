@@ -326,6 +326,7 @@ export default function Home() {
         };
 
         while (true) {
+          if (abortRef.current) break;
           const { done, value } = await reader.read();
           if (done) break;
 
@@ -358,6 +359,7 @@ export default function Home() {
             try {
               const event = JSON.parse(line);
               handleEvent(event);
+              if (expectingBinary > 0) break;
             } catch {}
           }
         }
