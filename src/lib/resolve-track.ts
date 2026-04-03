@@ -132,17 +132,29 @@ async function scrapeSpotifyTrack(url: string): Promise<TrackInfo | null> {
       : null;
     const albumArt = findSpotifyImageUrl(entity) || "";
 
-    console.log("[resolve] fallback scrape from Spotify embed:", artist, "-", name);
+    // Extract album name from the entity's album/release data
+    const albumName = typeof entity.album?.name === "string" ? entity.album.name.trim()
+      : typeof entity.albumOfTrack?.name === "string" ? entity.albumOfTrack.name.trim()
+      : typeof entity.release?.name === "string" ? entity.release.name.trim()
+      : "";
+
+    // Try to extract ISRC if available in the embed data
+    const isrc = typeof entity.isrc === "string" ? entity.isrc
+      : typeof entity.externalId === "string" ? entity.externalId
+      : typeof entity.external_ids?.isrc === "string" ? entity.external_ids.isrc
+      : null;
+
+    console.log("[resolve] fallback scrape from Spotify embed:", artist, "-", name, albumName ? `(album: ${albumName})` : "", isrc ? `(ISRC: ${isrc})` : "");
 
     return {
       name,
       artist,
       albumArtist: artist,
-      album: name,
+      album: albumName || name,
       albumArt,
       duration: formatDuration(durationMs),
       durationMs,
-      isrc: null,
+      isrc,
       genre: null,
       releaseDate,
       spotifyUrl: `https://open.spotify.com/track/${trackId}`,
@@ -170,13 +182,15 @@ function parseOembedTitle(raw: string): { artist: string | null; title: string }
 
 /** Score-based Deezer result picker */
 function pickBestDeezerMatch(
-  results: { id: number; title: string; artist: { name: string } }[] | undefined,
+  results: { id: number; title: string; artist: { name: string }; album?: { title: string } }[] | undefined,
   title: string,
   artist: string | null,
+  album?: string | null,
 ): { id: number } | null {
   if (!results?.length) return null;
   const nt = normalize(title);
   const na = artist ? normalize(artist) : null;
+  const nAlbum = album ? normalize(album) : null;
   let best = results[0];
   let bestScore = -1;
   for (const r of results) {
@@ -185,6 +199,12 @@ function pickBestDeezerMatch(
     const ra = normalize(r.artist.name);
     if (rt === nt) s += 3; else if (rt.includes(nt) || nt.includes(rt)) s += 1;
     if (na) { if (ra === na) s += 3; else if (ra.includes(na) || na.includes(ra)) s += 1; }
+    // Album match is a strong disambiguator for same-name tracks
+    if (nAlbum && r.album?.title) {
+      const rAlbum = normalize(r.album.title);
+      if (rAlbum === nAlbum) s += 4;
+      else if (rAlbum.includes(nAlbum) || nAlbum.includes(rAlbum)) s += 2;
+    }
     if (s > bestScore) { bestScore = s; best = r; }
   }
   return best;
@@ -386,19 +406,34 @@ async function searchMusicBrainz(title: string, artist: string | null): Promise<
 }
 
 /** Search Deezer with structured artist/title query + scoring. */
-export async function searchDeezerStructured(title: string, artist: string | null): Promise<TrackInfo | null> {
+export async function searchDeezerStructured(title: string, artist: string | null, album?: string | null): Promise<TrackInfo | null> {
   try {
-    const q = artist ? `artist:"${artist}" track:"${title}"` : title;
-    const res = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(q)}&limit=5`, {
+    let q = artist ? `artist:"${artist}" track:"${title}"` : title;
+    // Include album in query when available to help Deezer return the right version
+    if (album) q += ` album:"${album}"`;
+    const res = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(q)}&limit=10`, {
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;
     const data = await res.json();
-    const match = pickBestDeezerMatch(data.data, title, artist);
+    let match = pickBestDeezerMatch(data.data, title, artist, album);
+
+    // If album query returned no results, retry without album constraint
+    if (!match && album) {
+      const fallbackQ = artist ? `artist:"${artist}" track:"${title}"` : title;
+      const fallbackRes = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(fallbackQ)}&limit=10`, {
+        signal: AbortSignal.timeout(8000),
+      });
+      if (fallbackRes.ok) {
+        const fallbackData = await fallbackRes.json();
+        match = pickBestDeezerMatch(fallbackData.data, title, artist, album);
+      }
+    }
+
     if (match) {
       const meta = await fetchDeezerTrackMetadata(String(match.id));
       if (meta) {
-        console.log("[resolve] Deezer search:", meta.artist, "-", meta.name);
+        console.log("[resolve] Deezer search:", meta.artist, "-", meta.name, meta.album ? `(album: ${meta.album})` : "");
         return { ...meta, spotifyUrl: "", label: null, copyright: null } as TrackInfo;
       }
     }
@@ -412,11 +447,11 @@ export async function searchDeezerStructured(title: string, artist: string | nul
 
 /** Resolve a Spotify track URL → full TrackInfo. */
 export async function resolveSpotifyTrack(url: string): Promise<TrackInfo | null> {
-  // 1. Spotify API (client credentials)
+  // 1. Spotify API (client credentials) — best source, gives ISRC
   const spotify = await trySpotifyApi(url);
   if (spotify) return spotify;
 
-  // 2. Song.link → Deezer ID
+  // 2. Song.link → Deezer ID (ID-based, no name confusion)
   try {
     const resolved = await resolveToSpotify(url);
     if (resolved?.deezerId) {
@@ -428,28 +463,46 @@ export async function resolveSpotifyTrack(url: string): Promise<TrackInfo | null
     }
   } catch { /* continue */ }
 
-  // 3. oEmbed → structured search
+  // 3. Scrape Spotify embed page EARLY — this preserves the track's identity
+  //    (correct title, artist, album, and possibly ISRC) from the actual
+  //    Spotify track ID, which we use to disambiguate name-based searches.
+  const scraped = await scrapeSpotifyTrack(url);
+
+  // If scraped data has an ISRC, we can do a precise cross-catalog lookup
+  if (scraped?.isrc) {
+    const deezerId = await lookupDeezerByIsrc(scraped.isrc);
+    if (deezerId) {
+      const dz = await fetchDeezerTrackMetadata(deezerId);
+      if (dz) {
+        console.log("[resolve] Deezer via scraped ISRC:", dz.artist, "-", dz.name);
+        return { ...dz, spotifyUrl: url, label: null, copyright: null } as TrackInfo;
+      }
+    }
+  }
+
+  // Use scraped album context for disambiguation in name-based searches
+  const albumContext = scraped?.album && scraped.album !== scraped.name ? scraped.album : null;
+
+  // 4. oEmbed → structured search (with album context from scrape)
   const oembed = await resolveOembed(url);
   if (oembed) {
     const { artist, title } = oembed;
+    // Prefer album from scrape, which is more reliable
+    const album = albumContext;
 
     if (artist) {
-      // Have artist — Deezer structured search is fast and reliable
-      const dz = await searchDeezerStructured(title, artist);
+      const dz = await searchDeezerStructured(title, artist, album);
       if (dz) { dz.spotifyUrl = url; return dz; }
 
-      // MusicBrainz: best for artist+title search + gives ISRC → Deezer/Tidal
       const mb = await searchMusicBrainz(title, artist);
       if (mb) { mb.spotifyUrl = url; return mb; }
     } else {
-      // Without artist context, title-only MusicBrainz can produce bad matches.
-      // Prefer Deezer + iTunes first, then direct Spotify scrape fallback below.
-      const dz = await searchDeezerStructured(title, null);
+      const dz = await searchDeezerStructured(title, null, album);
       if (dz) { dz.spotifyUrl = url; return dz; }
     }
 
     try {
-      const itunes = await searchItunesTrack(artist || "", title);
+      const itunes = await searchItunesTrack(artist || "", title, album);
       if (itunes) {
         console.log("[resolve] iTunes search:", itunes.artist, "-", itunes.name);
         return { ...itunes, spotifyUrl: url };
@@ -457,14 +510,13 @@ export async function resolveSpotifyTrack(url: string): Promise<TrackInfo | null
     } catch { /* continue */ }
   }
 
+  // 5. Return scraped embed data if we have it (better than nothing)
+  if (scraped) {
+    console.log("[resolve] using scraped embed data as final fallback");
+    return scraped;
+  }
+
   console.log("[resolve] all sources exhausted for Spotify URL:", url);
-
-  // 4. Last resort: parse the Spotify embed payload directly.
-  // This avoids false negatives for tracks that exist on Spotify but are
-  // temporarily unavailable from other metadata sources.
-  const scraped = await scrapeSpotifyTrack(url);
-  if (scraped) return scraped;
-
   return null;
 }
 

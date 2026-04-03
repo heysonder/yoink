@@ -136,17 +136,48 @@ export async function lookupByItunesId(trackId: string): Promise<TrackInfo | nul
   }
 }
 
-export async function searchItunesTrack(artist: string, title: string): Promise<TrackInfo | null> {
+export async function searchItunesTrack(artist: string, title: string, album?: string | null): Promise<TrackInfo | null> {
   try {
-    const query = encodeURIComponent(`${artist} ${title}`.trim());
+    // Include album in search query when available for better results
+    const searchTerms = album ? `${artist} ${title} ${album}` : `${artist} ${title}`;
+    const query = encodeURIComponent(searchTerms.trim());
     const res = await fetch(
-      `https://itunes.apple.com/search?term=${query}&entity=song&limit=5`,
+      `https://itunes.apple.com/search?term=${query}&entity=song&limit=10`,
       { signal: AbortSignal.timeout(10000) }
     );
     if (!res.ok) return null;
     const data = await res.json();
-    const result = data.results?.[0];
-    if (!result) return null;
+    const results = data.results;
+    if (!results?.length) return null;
+
+    // Score results to pick the best match instead of blindly taking first
+    const normalTitle = title.toLowerCase().trim();
+    const normalArtist = artist.toLowerCase().split(",")[0].trim();
+    const normalAlbum = album?.toLowerCase().trim();
+
+    let bestResult = results[0];
+    let bestScore = -1;
+    for (const r of results) {
+      let score = 0;
+      const rTitle = (r.trackName || "").toLowerCase().trim();
+      const rArtist = (r.artistName || "").toLowerCase().trim();
+      const rAlbum = (r.collectionName || "").toLowerCase().trim();
+
+      if (rTitle === normalTitle) score += 3;
+      else if (rTitle.includes(normalTitle) || normalTitle.includes(rTitle)) score += 1;
+
+      if (normalArtist && (rArtist.includes(normalArtist) || normalArtist.includes(rArtist))) score += 3;
+
+      // Album match is the key disambiguator
+      if (normalAlbum && rAlbum) {
+        if (rAlbum === normalAlbum) score += 4;
+        else if (rAlbum.includes(normalAlbum) || normalAlbum.includes(rAlbum)) score += 2;
+      }
+
+      if (score > bestScore) { bestScore = score; bestResult = r; }
+    }
+
+    const result = bestResult;
     const durationMs = result.trackTimeMillis || 0;
     const minutes = Math.floor(durationMs / 60000);
     const seconds = Math.floor((durationMs % 60000) / 1000);

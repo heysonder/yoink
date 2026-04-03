@@ -480,7 +480,7 @@ function artistMatches(resultArtist: string, queryArtist: string): boolean {
   return a.includes(b) || b.includes(a);
 }
 
-type DeezerSearchItem = { id: number; duration: number; artist: { name: string } };
+type DeezerSearchItem = { id: number; duration: number; artist: { name: string }; album?: { title: string } };
 
 async function deezerSearch(query: string, strict: boolean): Promise<DeezerSearchItem[]> {
   const url = `https://api.deezer.com/2.0/search/track?q=${encodeURIComponent(query)}${strict ? "&strict=on" : ""}&limit=10`;
@@ -491,21 +491,39 @@ async function deezerSearch(query: string, strict: boolean): Promise<DeezerSearc
 }
 
 // Search Deezer by title + artist (public API, no auth needed)
-export async function searchDeezerByTitleArtist(track: { artist: string; name: string; durationMs: number }): Promise<string | null> {
+export async function searchDeezerByTitleArtist(track: { artist: string; name: string; durationMs: number; album?: string | null }): Promise<string | null> {
   try {
-    const fieldQuery = `artist:"${track.artist}" track:"${cleanTitle(track.name)}"`;
+    let fieldQuery = `artist:"${track.artist}" track:"${cleanTitle(track.name)}"`;
+    if (track.album) fieldQuery += ` album:"${track.album}"`;
 
-    const matchItem = (item: DeezerSearchItem) =>
-      Math.abs(item.duration * 1000 - track.durationMs) <= 5000 &&
-      artistMatches(item.artist.name, track.artist);
+    const matchItem = (item: DeezerSearchItem, requireAlbum = false) => {
+      if (Math.abs(item.duration * 1000 - track.durationMs) > 5000) return false;
+      if (!artistMatches(item.artist.name, track.artist)) return false;
+      // When album context is available and required, use it to disambiguate
+      if (requireAlbum && track.album && item.album?.title) {
+        const a = normalizeStr(track.album);
+        const b = normalizeStr(item.album.title);
+        if (a !== b && !a.includes(b) && !b.includes(a)) return false;
+      }
+      return true;
+    };
 
-    // Try strict field search first (most precise)
-    for (const item of await deezerSearch(fieldQuery, true)) {
-      if (matchItem(item)) return String(item.id);
+    // Try strict field search with album match first (most precise)
+    if (track.album) {
+      for (const item of await deezerSearch(fieldQuery, true)) {
+        if (matchItem(item, true)) return String(item.id);
+      }
+      for (const item of await deezerSearch(fieldQuery, false)) {
+        if (matchItem(item, true)) return String(item.id);
+      }
     }
 
-    // Relax strict mode — same field query, looser matching
-    for (const item of await deezerSearch(fieldQuery, false)) {
+    // Fallback: search without album constraint
+    const baseQuery = `artist:"${track.artist}" track:"${cleanTitle(track.name)}"`;
+    for (const item of await deezerSearch(baseQuery, true)) {
+      if (matchItem(item)) return String(item.id);
+    }
+    for (const item of await deezerSearch(baseQuery, false)) {
       if (matchItem(item)) return String(item.id);
     }
 

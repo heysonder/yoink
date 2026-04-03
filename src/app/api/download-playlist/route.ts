@@ -291,8 +291,8 @@ export async function POST(request: NextRequest) {
               const resolved = await resolveSpotifyTrack(track.spotifyUrl);
               if (resolved) return { ...resolved, spotifyUrl: track.spotifyUrl };
             }
-            // Fallback: Deezer structured search
-            const dz = await searchDeezerStructured(track.name, track.artist);
+            // Fallback: Deezer structured search (with album context for disambiguation)
+            const dz = await searchDeezerStructured(track.name, track.artist, track.album || null);
             if (dz) return { ...dz, spotifyUrl: track.spotifyUrl };
           } catch { /* keep original */ }
           return track;
