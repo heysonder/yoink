@@ -1,0 +1,152 @@
+import { NextRequest, NextResponse } from "next/server";
+import { LinearClient } from "@linear/sdk";
+import { rateLimit } from "@/lib/ratelimit";
+
+const TEAM_KEY = "YK";
+const PROJECT_NAME = "External Feedback Intake + Linear Triage";
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
+
+function getLinearClient(): LinearClient {
+  const apiKey = process.env.LINEAR_API_KEY;
+  if (!apiKey) throw new Error("LINEAR_API_KEY is not configured");
+  return new LinearClient({ apiKey });
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    // Rate limit
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const { allowed, retryAfter } = rateLimit(`feedback:${ip}`, 5, 60_000);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: `slow down — try again in ${retryAfter}s`, rateLimit: true },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } }
+      );
+    }
+
+    const formData = await request.formData();
+    const type = formData.get("type") as string | null;
+    const title = formData.get("title") as string | null;
+    const description = formData.get("description") as string | null;
+    const email = formData.get("email") as string | null;
+    const image = formData.get("image") as File | null;
+
+    // Validate required fields
+    if (!type || !["bug", "feature"].includes(type)) {
+      return NextResponse.json({ error: "valid report type is required" }, { status: 400 });
+    }
+    if (!title?.trim()) {
+      return NextResponse.json({ error: "title is required" }, { status: 400 });
+    }
+    if (!description?.trim()) {
+      return NextResponse.json({ error: "description is required" }, { status: 400 });
+    }
+    if (description.length > 5000) {
+      return NextResponse.json({ error: "description is too long (max 5000 characters)" }, { status: 400 });
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json({ error: "invalid email format" }, { status: 400 });
+    }
+
+    // Validate image if provided
+    if (image) {
+      if (!ALLOWED_IMAGE_TYPES.includes(image.type)) {
+        return NextResponse.json({ error: "image must be png, jpg, gif, or webp" }, { status: 400 });
+      }
+      if (image.size > MAX_IMAGE_SIZE) {
+        return NextResponse.json({ error: "image must be under 5MB" }, { status: 400 });
+      }
+    }
+
+    const client = getLinearClient();
+
+    // Find the yoinkify team
+    const teams = await client.teams();
+    const team = teams.nodes.find((t) => t.key === TEAM_KEY);
+    if (!team) {
+      console.error("[feedback] yoinkify team not found");
+      return NextResponse.json({ error: "internal configuration error" }, { status: 500 });
+    }
+
+    // Find triage state
+    const states = await team.states();
+    const triageState = states.nodes.find((s) => s.name.toLowerCase() === "triage");
+
+    // Find or note missing labels
+    const labels = await team.labels();
+    const labelName = type === "bug" ? "Bug" : "Feature Request";
+    const label = labels.nodes.find((l) => l.name === labelName);
+
+    // Find project
+    const projects = await client.projects({ filter: { name: { eq: PROJECT_NAME } } });
+    const project = projects.nodes[0];
+
+    // Upload image if provided
+    let imageUrl: string | null = null;
+    let imageUploadFailed = false;
+    if (image) {
+      try {
+        const arrayBuffer = await image.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const uploadPayload = await client.fileUpload(image.type, image.name, image.size);
+        const uploadUrl = uploadPayload.uploadFile?.uploadUrl;
+        const assetUrl = uploadPayload.uploadFile?.assetUrl;
+
+        if (uploadUrl && assetUrl) {
+          const uploadRes = await fetch(uploadUrl, {
+            method: "PUT",
+            headers: {
+              "Content-Type": image.type,
+              "Cache-Control": "public, max-age=31536000",
+            },
+            body: buffer,
+          });
+          if (uploadRes.ok) {
+            imageUrl = assetUrl;
+          } else {
+            console.error("[feedback] image upload PUT failed:", uploadRes.status);
+            imageUploadFailed = true;
+          }
+        } else {
+          console.error("[feedback] no upload URL from Linear");
+          imageUploadFailed = true;
+        }
+      } catch (e) {
+        console.error("[feedback] image upload error:", e instanceof Error ? e.message : e);
+        imageUploadFailed = true;
+      }
+    }
+
+    // Build issue description
+    let body = description.trim();
+    if (imageUrl) {
+      body += `\n\n**Attached screenshot:**\n![screenshot](${imageUrl})`;
+    }
+    if (email) {
+      body += `\n\n---\n**Reporter email:** ${email}`;
+    }
+    body += `\n\n---\n*Submitted via yoinkify.com/feedback*`;
+
+    // Create the issue
+    const issuePayload = await client.createIssue({
+      teamId: team.id,
+      title: title.trim(),
+      description: body,
+      ...(triageState ? { stateId: triageState.id } : {}),
+      ...(label ? { labelIds: [label.id] } : {}),
+      ...(project ? { projectId: project.id } : {}),
+    });
+
+    const issue = await issuePayload.issue;
+    console.log(`[feedback] [${type}] ${ip} → created ${issue?.identifier || "issue"}: "${title.trim()}"`);
+
+    return NextResponse.json({
+      success: true,
+      imageUploadFailed,
+    });
+  } catch (error) {
+    console.error("[feedback] error:", error instanceof Error ? error.message : error);
+    return NextResponse.json({ error: "something went wrong" }, { status: 500 });
+  }
+}
