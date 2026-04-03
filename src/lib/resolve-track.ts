@@ -94,18 +94,56 @@ function findSpotifyImageUrl(value: unknown): string | null {
   return null;
 }
 
+/**
+ * Scrape album name from the regular Spotify track page's og:description.
+ * Format: "Artist · Album · Song · Year"
+ */
+async function scrapeSpotifyAlbumName(trackId: string): Promise<string | null> {
+  try {
+    const res = await fetch(`https://open.spotify.com/track/${trackId}`, {
+      signal: AbortSignal.timeout(8000),
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; bot)" },
+      redirect: "follow",
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+
+    // og:description format: "Artist · Album · Song · Year"
+    const ogMatch = html.match(/<meta[^>]*property="og:description"[^>]*content="([^"]+)"/i)
+      || html.match(/<meta[^>]*content="([^"]+)"[^>]*property="og:description"/i);
+    if (ogMatch) {
+      const parts = ogMatch[1].split(" · ");
+      // Format is: Artist · Album · Song/Type · Year
+      if (parts.length >= 3) {
+        const albumName = parts[1].trim();
+        if (albumName) {
+          console.log("[resolve] scraped album name from og:description:", albumName);
+          return albumName;
+        }
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 async function scrapeSpotifyTrack(url: string): Promise<TrackInfo | null> {
   const trackId = extractTrackId(url);
   if (!trackId) return null;
 
   try {
-    const res = await fetch(`https://open.spotify.com/embed/track/${trackId}`, {
-      signal: AbortSignal.timeout(8000),
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; bot)" },
-    });
-    if (!res.ok) return null;
+    // Fetch embed page (for track metadata) and regular page (for album name) in parallel
+    const [embedRes, albumName] = await Promise.all([
+      fetch(`https://open.spotify.com/embed/track/${trackId}`, {
+        signal: AbortSignal.timeout(8000),
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; bot)" },
+      }),
+      scrapeSpotifyAlbumName(trackId),
+    ]);
+    if (!embedRes.ok) return null;
 
-    const html = await res.text();
+    const html = await embedRes.text();
     const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
     if (!nextDataMatch) return null;
 
@@ -132,19 +170,7 @@ async function scrapeSpotifyTrack(url: string): Promise<TrackInfo | null> {
       : null;
     const albumArt = findSpotifyImageUrl(entity) || "";
 
-    // Extract album name from the entity's album/release data
-    const albumName = typeof entity.album?.name === "string" ? entity.album.name.trim()
-      : typeof entity.albumOfTrack?.name === "string" ? entity.albumOfTrack.name.trim()
-      : typeof entity.release?.name === "string" ? entity.release.name.trim()
-      : "";
-
-    // Try to extract ISRC if available in the embed data
-    const isrc = typeof entity.isrc === "string" ? entity.isrc
-      : typeof entity.externalId === "string" ? entity.externalId
-      : typeof entity.external_ids?.isrc === "string" ? entity.external_ids.isrc
-      : null;
-
-    console.log("[resolve] fallback scrape from Spotify embed:", artist, "-", name, albumName ? `(album: ${albumName})` : "", isrc ? `(ISRC: ${isrc})` : "");
+    console.log("[resolve] fallback scrape from Spotify embed:", artist, "-", name, albumName ? `(album: ${albumName})` : "(no album)");
 
     return {
       name,
@@ -154,7 +180,7 @@ async function scrapeSpotifyTrack(url: string): Promise<TrackInfo | null> {
       albumArt,
       duration: formatDuration(durationMs),
       durationMs,
-      isrc,
+      isrc: null,
       genre: null,
       releaseDate,
       spotifyUrl: `https://open.spotify.com/track/${trackId}`,
@@ -463,22 +489,9 @@ export async function resolveSpotifyTrack(url: string): Promise<TrackInfo | null
     }
   } catch { /* continue */ }
 
-  // 3. Scrape Spotify embed page EARLY — this preserves the track's identity
-  //    (correct title, artist, album, and possibly ISRC) from the actual
-  //    Spotify track ID, which we use to disambiguate name-based searches.
+  // 3. Scrape Spotify embed + regular page to get album context for disambiguation.
+  //    The embed has title/artist/duration, the regular page's og:description has album name.
   const scraped = await scrapeSpotifyTrack(url);
-
-  // If scraped data has an ISRC, we can do a precise cross-catalog lookup
-  if (scraped?.isrc) {
-    const deezerId = await lookupDeezerByIsrc(scraped.isrc);
-    if (deezerId) {
-      const dz = await fetchDeezerTrackMetadata(deezerId);
-      if (dz) {
-        console.log("[resolve] Deezer via scraped ISRC:", dz.artist, "-", dz.name);
-        return { ...dz, spotifyUrl: url, label: null, copyright: null } as TrackInfo;
-      }
-    }
-  }
 
   // Use scraped album context for disambiguation in name-based searches
   const albumContext = scraped?.album && scraped.album !== scraped.name ? scraped.album : null;
