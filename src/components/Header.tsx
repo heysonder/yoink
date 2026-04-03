@@ -21,6 +21,7 @@ export default function Header() {
         >
           tip jar
         </a>
+        <Link href="/feedback" className="text-xs text-surface2 hover:text-lavender transition-colors duration-200">feedback</Link>
         <Link href="/roadmap" className="text-xs text-surface2 hover:text-lavender transition-colors duration-200">v3.0</Link>
       </div>
     </header>

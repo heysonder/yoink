@@ -334,15 +334,15 @@ export default function RoadmapPage() {
           <div className="space-y-1">
             <p className="text-base font-bold text-text">want something on here?</p>
             <p className="text-sm text-overlay0">
-              reach out and tell us what to build next.
+              tell us what to build next.
             </p>
           </div>
-          <a
-            href="mailto:me@yoinkify.com"
+          <Link
+            href="/feedback"
             className="btn-press text-sm text-lavender border border-lavender/30 hover:bg-lavender/10 px-6 py-3 rounded-lg font-bold uppercase tracking-wider transition-all duration-200 flex-shrink-0"
           >
-            me@yoinkify.com
-          </a>
+            send feedback
+          </Link>
         </div>
       </section>
 
