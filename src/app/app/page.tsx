@@ -42,6 +42,7 @@ export default function Home() {
   const [playlist, setPlaylist] = useState<PlaylistInfo | null>(null);
   const [originalUrl, setOriginalUrl] = useState("");
   const [trackStatuses, setTrackStatuses] = useState<TrackStatus[]>([]);
+  const [trackErrors, setTrackErrors] = useState<Record<number, string>>({});
   const [error, setError] = useState("");
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [quality, setQuality] = useState<QualityInfo | null>(null);
@@ -74,6 +75,7 @@ export default function Home() {
     setTrack(null);
     setPlaylist(null);
     setTrackStatuses([]);
+    setTrackErrors({});
     setOriginalUrl(url);
     abortRef.current = false;
     downloadTriggeredRef.current = false;
@@ -301,6 +303,7 @@ export default function Home() {
               next[index] = "error";
               return next;
             });
+            setTrackErrors((prev) => ({ ...prev, [index]: "not available on any audio source" }));
           }
         };
 
@@ -317,11 +320,15 @@ export default function Home() {
             currentTrackIndex = event.index as number;
             expectingBinary = event.size as number;
           } else if (event.type === "error") {
+            const idx = event.index as number;
             setTrackStatuses((prev) => {
               const next = [...prev];
-              next[event.index as number] = "error";
+              next[idx] = "error";
               return next;
             });
+            if (event.reason) {
+              setTrackErrors((prev) => ({ ...prev, [idx]: event.reason as string }));
+            }
           }
         };
 
@@ -521,12 +528,14 @@ export default function Home() {
     setTrack(null);
     setPlaylist(null);
     setTrackStatuses([]);
+    setTrackErrors({});
     setError("");
     setQuality(null);
     abortRef.current = true;
   };
 
   const doneCount = trackStatuses.filter((s) => s === "done").length;
+  const errorCount = trackStatuses.filter((s) => s === "error").length;
   const totalCount = trackStatuses.length;
 
   return (
@@ -798,7 +807,7 @@ export default function Home() {
                         <span className="text-xs text-green">✓</span>
                       )}
                       {trackStatuses[i] === "error" && (
-                        <span className="text-xs text-red">!</span>
+                        <span className="text-xs text-red cursor-help" title={trackErrors[i] || "download failed"}>!</span>
                       )}
                     </div>
 
@@ -844,7 +853,10 @@ export default function Home() {
                       {doneCount}/{totalCount}
                     </span>
                   )}
-                  {state === "done" && `downloaded ${doneCount}/${totalCount}`}
+                  {state === "done" && (errorCount > 0
+                    ? `${doneCount}/${totalCount} downloaded · ${errorCount} failed`
+                    : `downloaded ${doneCount}/${totalCount}`
+                  )}
                   {state === "ready" && "download all"}
                 </button>
                 <button

@@ -361,7 +361,15 @@ export async function POST(request: NextRequest) {
               results[i + j] = result.value;
             } else {
               errors.push(i + j);
-              send({ type: "error", index: i + j });
+              const reason = result.reason instanceof Error ? result.reason.message : String(result.reason);
+              const shortReason = reason.includes("any source")
+                ? "not available on any audio source"
+                : reason.includes("mismatch")
+                ? "track verification failed"
+                : reason.includes("timeout") || reason.includes("Timeout")
+                ? "download timed out"
+                : "download failed";
+              send({ type: "error", index: i + j, reason: shortReason });
               console.error(`[playlist] track ${i + j} failed after ${MAX_RETRIES + 1} attempts:`, result.reason);
             }
           }
