@@ -39,6 +39,9 @@ export async function POST(request: NextRequest) {
     if (!title?.trim()) {
       return NextResponse.json({ error: "title is required" }, { status: 400 });
     }
+    if (title.length > 200) {
+      return NextResponse.json({ error: "title is too long (max 200 characters)" }, { status: 400 });
+    }
     if (!description?.trim()) {
       return NextResponse.json({ error: "description is required" }, { status: 400 });
     }
@@ -69,17 +72,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "internal configuration error" }, { status: 500 });
     }
 
-    // Find triage state
-    const states = await team.states();
+    // Fetch states, labels, and project in parallel
+    const [states, labels, projects] = await Promise.all([
+      team.states(),
+      team.labels(),
+      client.projects({ filter: { name: { eq: PROJECT_NAME } } }),
+    ]);
     const triageState = states.nodes.find((s) => s.name.toLowerCase() === "triage");
-
-    // Find or note missing labels
-    const labels = await team.labels();
     const labelName = type === "bug" ? "Bug" : "Feature Request";
     const label = labels.nodes.find((l) => l.name === labelName);
-
-    // Find project
-    const projects = await client.projects({ filter: { name: { eq: PROJECT_NAME } } });
     const project = projects.nodes[0];
 
     // Upload image if provided
