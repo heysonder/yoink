@@ -13,6 +13,7 @@
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
     "@fontsource/jetbrains-mono": "^5.2.8",
+    "@linear/sdk": "^80.1.0",
     "fflate": "^0.8.2",
     "next": "16.1.6",
     "react": "19.2.3",
