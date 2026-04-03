@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 
 // Banner disabled — migration is old news
@@ -8,13 +8,11 @@ const EXPIRY = new Date("2026-03-25T00:00:00Z").getTime();
 const DISMISS_KEY = "yoink-migration-banner-dismissed";
 
 export default function MigrationBanner() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    if (Date.now() > EXPIRY) return;
-    if (localStorage.getItem(DISMISS_KEY)) return;
-    setVisible(true);
-  }, []);
+  const [visible, setVisible] = useState(() =>
+    typeof window !== "undefined"
+    && Date.now() <= EXPIRY
+    && !localStorage.getItem(DISMISS_KEY)
+  );
 
   if (!visible) return null;
 

@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated/vendored files
+    "public/ffmpeg/**",
+    "workers/**",
   ]),
 ]);
 

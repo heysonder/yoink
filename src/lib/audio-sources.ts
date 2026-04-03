@@ -3,8 +3,8 @@ import { resolveSonglink } from "./songlink";
 import { fetchDeezerAudio, lookupDeezerByIsrc, searchDeezerByTitleArtist } from "./deezer";
 import { lookupTidalByIsrc, searchTidalByTitleArtist, fetchTidalAudio } from "./tidal";
 import { searchYouTube, getAudioStreamUrl } from "./youtube";
-import { analyzeAudio, type AudioQualityInfo } from "./ffprobe";
-import { verifyTrack, type AcoustIdResult } from "./acoustid";
+import type { AudioQualityInfo } from "./ffprobe";
+import type { AcoustIdResult } from "./acoustid";
 
 export interface AudioResult {
   buffer: Buffer;

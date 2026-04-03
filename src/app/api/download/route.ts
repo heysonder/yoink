@@ -11,7 +11,7 @@ import {
 } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
-import { detectPlatform, extractYouTubeId, type TrackInfo } from "@/lib/spotify";
+import { detectPlatform } from "@/lib/spotify";
 import { setExplicitTag } from "@/lib/mp4-advisory";
 import { ffmpegSemaphore } from "@/lib/semaphore";
 import { lookupItunesGenre, lookupItunesCatalogIds } from "@/lib/itunes";
@@ -92,8 +92,7 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
-    let track = resolved.track;
-    const youtubeVideoId = resolved.youtubeVideoId || (platform === "youtube" ? extractYouTubeId(url) : null);
+    const track = resolved.track;
 
     // Override genre with iTunes if requested
     if (genreSource === "itunes") {
