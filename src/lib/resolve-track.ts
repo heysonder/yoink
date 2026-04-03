@@ -619,45 +619,93 @@ async function scrapeSpotifyEmbed(type: "playlist" | "album", id: string): Promi
     if (!res.ok) return null;
     const html = await res.text();
 
-    // Extract playlist/album name
-    const nameMatch = html.match(/"name":"([^"]+?)","uri":"spotify:(?:playlist|album):/);
-    const name = nameMatch ? nameMatch[1] : "Unknown";
-
-    // Extract tracks: {uri, uid, title, subtitle, isExplicit, duration, ...}
-    const trackPattern = /"uri":"spotify:track:([^"]+)","uid":"[^"]*","title":"([^"]*)","subtitle":"([^"]*)","isExplicit":(true|false),"isNineteenPlus":[^,]*,"duration":(\d+)/g;
     const tracks: TrackInfo[] = [];
-    let m;
-    while ((m = trackPattern.exec(html)) !== null) {
-      const [, trackId, title, artist, explicit, durationStr] = m;
-      const durationMs = parseInt(durationStr, 10);
-      const minutes = Math.floor(durationMs / 60000);
-      const seconds = Math.floor((durationMs % 60000) / 1000);
-      tracks.push({
-        name: title,
-        artist: artist,
-        albumArtist: null,
-        album: type === "album" ? name : "",
-        albumArt: "",
-        duration: `${minutes}:${seconds.toString().padStart(2, "0")}`,
-        durationMs,
-        isrc: null,
-        genre: null,
-        releaseDate: null,
-        spotifyUrl: `https://open.spotify.com/track/${trackId}`,
-        explicit: explicit === "true",
-        trackNumber: tracks.length + 1,
-        discNumber: 1,
-        label: null,
-        copyright: null,
-        totalTracks: null,
-      });
+    let name = "Unknown";
+    let image = "";
+
+    // Primary: parse __NEXT_DATA__ JSON payload (reliable, structured)
+    const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
+    if (nextDataMatch) {
+      try {
+        const nextData = JSON.parse(nextDataMatch[1]);
+        const entity = nextData?.props?.pageProps?.state?.data?.entity;
+        if (entity) {
+          name = entity.name || name;
+          image = findSpotifyImageUrl(entity) || "";
+
+          const trackList = entity.trackList || entity.tracks || [];
+          for (const t of trackList) {
+            const trackIdMatch = typeof t.uri === "string" ? t.uri.match(/spotify:track:(.+)/) : null;
+            const trackId = trackIdMatch ? trackIdMatch[1] : null;
+            if (!trackId) continue;
+
+            const title = typeof t.title === "string" ? t.title : "";
+            const artist = typeof t.subtitle === "string" ? t.subtitle : "";
+            const durationMs = typeof t.duration === "number" ? t.duration : 0;
+
+            tracks.push({
+              name: title,
+              artist,
+              albumArtist: null,
+              album: type === "album" ? name : "",
+              albumArt: "",
+              duration: formatDuration(durationMs),
+              durationMs,
+              isrc: null,
+              genre: null,
+              releaseDate: null,
+              spotifyUrl: `https://open.spotify.com/track/${trackId}`,
+              explicit: Boolean(t.isExplicit),
+              trackNumber: tracks.length + 1,
+              discNumber: 1,
+              label: null,
+              copyright: null,
+              totalTracks: null,
+            });
+          }
+        }
+      } catch { /* fall through to regex */ }
+    }
+
+    // Fallback: regex extraction for older embed formats
+    if (tracks.length === 0) {
+      const nameMatch = html.match(/"name":"([^"]+?)","uri":"spotify:(?:playlist|album):/);
+      name = nameMatch ? nameMatch[1] : name;
+
+      const trackPattern = /"uri":"spotify:track:([^"]+)","uid":"[^"]*","title":"([^"]*)","subtitle":"([^"]*)","isExplicit":(true|false),"isNineteenPlus":[^,]*,"duration":(\d+)/g;
+      let m;
+      while ((m = trackPattern.exec(html)) !== null) {
+        const [, trackId, title, artist, explicit, durationStr] = m;
+        const durationMs = parseInt(durationStr, 10);
+        tracks.push({
+          name: title,
+          artist,
+          albumArtist: null,
+          album: type === "album" ? name : "",
+          albumArt: "",
+          duration: formatDuration(durationMs),
+          durationMs,
+          isrc: null,
+          genre: null,
+          releaseDate: null,
+          spotifyUrl: `https://open.spotify.com/track/${trackId}`,
+          explicit: explicit === "true",
+          trackNumber: tracks.length + 1,
+          discNumber: 1,
+          label: null,
+          copyright: null,
+          totalTracks: null,
+        });
+      }
     }
 
     if (tracks.length === 0) return null;
 
-    // Try to get album art from the page
-    const artMatch = html.match(/"coverArt":\{"extractedColors"[^}]*\},"sources":\[\{"url":"([^"]+)"/);
-    const image = artMatch ? artMatch[1] : "";
+    // Try to get album art from the page if not found in __NEXT_DATA__
+    if (!image) {
+      const artMatch = html.match(/"coverArt":\{"extractedColors"[^}]*\},"sources":\[\{"url":"([^"]+)"/);
+      image = artMatch ? artMatch[1] : "";
+    }
 
     console.log(`[resolve] scraped ${tracks.length} tracks from embed ${type}/${id}`);
     return { name, image, tracks };
