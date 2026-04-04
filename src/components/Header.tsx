@@ -17,8 +17,9 @@ export default function Header() {
           href="https://yoinkify.com/tip"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs text-overlay0 hover:text-peach transition-colors duration-200"
+          className="text-xs text-overlay0 hover:text-peach transition-colors duration-200 flex items-center gap-1.5"
         >
+          <img src="https://storage.ko-fi.com/cdn/brandasset/v2/kofi_symbol.png" alt="" className="w-4 h-4" />
           tip jar
         </a>
         <Link href="/feedback" className="text-xs text-surface2 hover:text-lavender transition-colors duration-200">feedback</Link>
