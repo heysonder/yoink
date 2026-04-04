@@ -2,7 +2,9 @@
 
 paste a spotify link. get the file.
 
-**[yoinkify.com](https://yoinkify.com)** · [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/O5O31P50IY)
+**[yoinkify.com](https://yoinkify.com)**
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/O5O31P50IY)
 
 ## features
 
