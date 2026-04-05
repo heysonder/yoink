@@ -93,8 +93,20 @@ const items: RoadmapItem[] = [
   {
     title: "musixmatch lyrics",
     description: "musixmatch as a fallback lyrics source when lrclib misses. better coverage for synced and plain lyrics.",
-    status: "in-progress",
+    status: "shipped",
     tag: "metadata",
+  },
+  {
+    title: "synced lyrics toggle",
+    description: "optionally embed LRC timestamps in lyrics metadata for players that support synced lyrics display (foobar2000, Poweramp, Plexamp).",
+    status: "shipped",
+    tag: "metadata",
+  },
+  {
+    title: "yt-dlp fallback",
+    description: "yt-dlp as a reliable youtube audio source when piped instances are down. self-hosted instances now work out of the box with zero configuration.",
+    status: "shipped",
+    tag: "audio",
   },
   {
     title: "open source",
@@ -123,12 +135,6 @@ const items: RoadmapItem[] = [
   {
     title: "queue system",
     description: "download multiple links back to back without waiting for each one to finish.",
-    status: "planned",
-    tag: "ux",
-  },
-  {
-    title: "mobile experience",
-    description: "optimized layout and download flow for phones. maybe a pwa.",
     status: "planned",
     tag: "ux",
   },
