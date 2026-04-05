@@ -4,8 +4,6 @@ services:
     ports:
       - "3000:3000"
     env_file: .env
-    environment:
-      - GIT_COMMIT=${GIT_COMMIT:-dev}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
