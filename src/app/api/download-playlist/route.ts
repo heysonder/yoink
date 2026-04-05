@@ -44,7 +44,8 @@ function isAllowedUrl(url: string, allowedHosts: string[]): boolean {
 async function processTrack(
   track: TrackInfo,
   requestedFormat: string | undefined,
-  genreSource?: string
+  genreSource?: string,
+  syncedLyrics?: boolean,
 ): Promise<{ filename: string; buffer: Buffer }> {
   const preferLossless = requestedFormat === "flac" || requestedFormat === "alac";
 
@@ -171,7 +172,8 @@ async function processTrack(
       ffmpegArgs.push("-metadata", `copyright=${track.copyright}`);
     }
     if (lyrics) {
-      ffmpegArgs.push("-metadata", `lyrics=${lyrics}`);
+      const embeddedLyrics = syncedLyrics ? lyrics : lyrics.replace(/^\[[\d:.]+\]\s*/gm, "").trim();
+      ffmpegArgs.push("-metadata", `lyrics=${embeddedLyrics}`);
     }
     if (wantAlac || wantFlac) {
       const bitDepth = audio.qualityInfo?.bitDepth ?? 16;
@@ -243,7 +245,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { url, format: requestedFormat, genreSource } = body;
+    const { url, format: requestedFormat, genreSource, syncedLyrics } = body;
 
     console.log(`[playlist-dl] [${source}] ${ip} → ${url}${requestedFormat ? ` (${requestedFormat})` : ""}`);
 
@@ -330,7 +332,7 @@ export async function POST(request: NextRequest) {
           let lastError: unknown;
           for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
             try {
-              const result = await processTrack(track, requestedFormat, genreSource);
+              const result = await processTrack(track, requestedFormat, genreSource, syncedLyrics === true);
               send({ type: "done", index });
               return result;
             } catch (err) {

@@ -133,8 +133,7 @@ export function buildFfmpegArgs(
     args.push("-metadata", `copyright=${metadata.copyright}`);
   }
   if (metadata.lyrics) {
-    const plainLyrics = metadata.lyrics.replace(/^\[[\d:.]+\]\s*/gm, "").trim();
-    args.push("-metadata", `lyrics=${plainLyrics}`);
+    args.push("-metadata", `lyrics=${metadata.lyrics}`);
   }
   if (outputFormat === "alac" || outputFormat === "flac") {
     const bitDepth = metadata.bitDepth ?? 16;

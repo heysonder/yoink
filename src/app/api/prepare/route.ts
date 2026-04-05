@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
     const url = body.url;
     const requestedFormat = body.format as string | undefined;
     const genreSource = body.genreSource as string | undefined;
+    const syncedLyrics = body.syncedLyrics === true;
     const preferLossless = requestedFormat === "flac" || requestedFormat === "alac";
 
     if (!url || typeof url !== "string") {
@@ -102,7 +103,7 @@ export async function POST(request: NextRequest) {
     }
 
     const plainLyrics = lyrics
-      ? lyrics.replace(/^\[[\d:.]+\]\s*/gm, "").trim()
+      ? (syncedLyrics ? lyrics : lyrics.replace(/^\[[\d:.]+\]\s*/gm, "").trim())
       : null;
 
     const metadata = buildEnvelopeMetadata(track, audio, plainLyrics, catalogIds);

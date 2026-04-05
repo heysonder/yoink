@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
     const url = body.url;
     const requestedFormat = body.format as string | undefined; // "mp3" | "flac" | "alac"
     const genreSource = body.genreSource as string | undefined;
+    const syncedLyrics = body.syncedLyrics === true;
     const preferLossless = requestedFormat === "flac" || requestedFormat === "alac";
 
     if (!url || typeof url !== "string") {
@@ -225,8 +226,8 @@ export async function POST(request: NextRequest) {
       ffmpegArgs.push("-metadata", `copyright=${track.copyright}`);
     }
     if (lyrics) {
-      const plainLyrics = lyrics.replace(/^\[[\d:.]+\]\s*/gm, "").trim();
-      ffmpegArgs.push("-metadata", `lyrics=${plainLyrics}`);
+      const embeddedLyrics = syncedLyrics ? lyrics : lyrics.replace(/^\[[\d:.]+\]\s*/gm, "").trim();
+      ffmpegArgs.push("-metadata", `lyrics=${embeddedLyrics}`);
     }
     if (wantAlac || wantFlac) {
       const bitDepth = audio.qualityInfo?.bitDepth ?? 16;

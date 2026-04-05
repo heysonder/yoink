@@ -49,6 +49,7 @@ export default function Home() {
   const [format, setFormat] = useState<Format>("mp3");
   const [downloadPhase, setDownloadPhase] = useState<string>("");
   const [genreSource, setGenreSource] = useState<"spotify" | "itunes">("spotify");
+  const [syncedLyrics, setSyncedLyrics] = useState(false);
   const abortRef = useRef(false);
   const downloadTriggeredRef = useRef(false);
   // Enter key triggers download when track/playlist is ready
@@ -118,7 +119,7 @@ export default function Home() {
         const res = await fetch("/api/prepare", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: trackUrl, format, genreSource }),
+          body: JSON.stringify({ url: trackUrl, format, genreSource, syncedLyrics }),
         });
 
         if (!res.ok) {
@@ -178,7 +179,7 @@ export default function Home() {
       const res = await fetch("/api/download", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: trackUrl, format, genreSource }),
+        body: JSON.stringify({ url: trackUrl, format, genreSource, syncedLyrics }),
       });
 
       if (!res.ok) {
@@ -239,7 +240,7 @@ export default function Home() {
         const res = await fetch("/api/prepare-playlist", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: originalUrl, format, genreSource }),
+          body: JSON.stringify({ url: originalUrl, format, genreSource, syncedLyrics }),
         });
 
         if (!res.ok) {
@@ -281,7 +282,7 @@ export default function Home() {
               const fallbackRes = await fetch("/api/download", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ url: trackUrl, format, genreSource }),
+                body: JSON.stringify({ url: trackUrl, format, genreSource, syncedLyrics }),
               });
               if (fallbackRes.ok) {
                 const audioFormat = fallbackRes.headers.get("X-Audio-Format") || "mp3";
@@ -419,7 +420,7 @@ export default function Home() {
       const res = await fetch("/api/download-playlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: originalUrl, format, genreSource }),
+        body: JSON.stringify({ url: originalUrl, format, genreSource, syncedLyrics }),
       });
 
       if (!res.ok) {
@@ -578,11 +579,25 @@ export default function Home() {
                   onClick={() => setGenreSource(genreSource === "spotify" ? "itunes" : "spotify")}
                   disabled={state === "downloading"}
                   className={`text-[10px] tracking-wider transition-colors duration-200 disabled:opacity-50 ${
-                    genreSource === "itunes" ? "text-lavender/70" : "text-overlay0/30 hover:text-overlay0/50"
+                    genreSource === "itunes" ? "text-lavender" : "text-overlay0/50 hover:text-overlay0/70"
                   }`}
                 >
-                  {genreSource === "itunes" ? "iTunes genres ✓" : "iTunes genres"}
+                  {genreSource === "itunes" ? "[ iTunes genres ✓ ]" : "[ iTunes genres ]"}
                 </button>
+                <div className="group relative">
+                  <button
+                    onClick={() => setSyncedLyrics(!syncedLyrics)}
+                    disabled={state === "downloading"}
+                    className={`text-[10px] tracking-wider transition-colors duration-200 disabled:opacity-50 ${
+                      syncedLyrics ? "text-lavender" : "text-overlay0/50 hover:text-overlay0/70"
+                    }`}
+                  >
+                    {syncedLyrics ? "[ synced lyrics ✓ ]" : "[ synced lyrics ]"}
+                  </button>
+                  <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 rounded-md bg-surface0 text-[9px] text-subtext0 tracking-wider whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200">
+                    embeds LRC timestamps — works with foobar2000, Poweramp, Plexamp
+                  </div>
+                </div>
                 <span className="text-[10px] text-overlay0/30 tracking-wider">
                   {format === "mp3" ? "~8mb per track" : "~40mb per track"}
                 </span>

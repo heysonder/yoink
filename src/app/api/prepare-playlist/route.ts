@@ -34,6 +34,7 @@ async function prepareTrack(
   track: TrackInfo,
   requestedFormat: string | undefined,
   genreSource?: string,
+  syncedLyrics?: boolean,
 ): Promise<Buffer> {
   const preferLossless = requestedFormat === "flac" || requestedFormat === "alac";
 
@@ -59,7 +60,7 @@ async function prepareTrack(
   }
 
   const plainLyrics = lyrics
-    ? lyrics.replace(/^\[[\d:.]+\]\s*/gm, "").trim()
+    ? (syncedLyrics ? lyrics : lyrics.replace(/^\[[\d:.]+\]\s*/gm, "").trim())
     : null;
 
   const metadata = buildEnvelopeMetadata(track, audio, plainLyrics, catalogIds);
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { url, format: requestedFormat, genreSource } = body;
+    const { url, format: requestedFormat, genreSource, syncedLyrics } = body;
 
     console.log(`[prepare-playlist] [${source}] ${ip} → ${url}`);
 
@@ -160,7 +161,7 @@ export async function POST(request: NextRequest) {
           let lastError: unknown;
           for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
             try {
-              return await prepareTrack(track, requestedFormat, genreSource);
+              return await prepareTrack(track, requestedFormat, genreSource, syncedLyrics === true);
             } catch (err) {
               lastError = err;
               if (attempt < MAX_RETRIES) {
