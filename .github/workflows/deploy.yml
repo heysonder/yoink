@@ -23,8 +23,9 @@ jobs:
           ssh -i ~/.ssh/deploy_key root@"$VPS_HOST" '
             cd /root/services/yoink &&
             git pull origin main &&
-            GIT_COMMIT=$(git rev-parse --short HEAD) docker compose build --no-cache &&
-            GIT_COMMIT=$(git rev-parse --short HEAD) docker compose up -d
+            git rev-parse --short HEAD > .git-commit &&
+            docker compose build &&
+            docker compose up -d
           '
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}

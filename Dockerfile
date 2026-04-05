@@ -12,18 +12,14 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-ARG GIT_COMMIT=unknown
-ENV NEXT_PUBLIC_GIT_COMMIT=$GIT_COMMIT
 RUN npm run build
 
 FROM base AS runner
 WORKDIR /app
-ARG GIT_COMMIT=unknown
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 ENV NODE_OPTIONS=--dns-result-order=ipv4first
-ENV GIT_COMMIT=$GIT_COMMIT
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
@@ -31,6 +27,7 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY .git-commit* ./
 
 USER nextjs
 EXPOSE 3000
