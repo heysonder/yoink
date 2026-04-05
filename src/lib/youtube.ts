@@ -6,16 +6,6 @@ const PIPED_INSTANCES = process.env.PIPED_API_URL
       "https://api.piped.private.coffee",
     ];
 
-// YouTube innertube API for direct access (no piped dependency)
-const INNERTUBE_API = "https://www.youtube.com/youtubei/v1";
-const INNERTUBE_CLIENT = {
-  clientName: "ANDROID",
-  clientVersion: "19.09.37",
-  androidSdkVersion: 30,
-  hl: "en",
-  gl: "US",
-};
-
 function normalize(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
@@ -72,49 +62,6 @@ function scoreResults(
   }).sort((a, b) => b.score - a.score);
 }
 
-async function innertubeSearch(query: string): Promise<{ url: string; title: string; uploaderName: string; duration: number }[]> {
-  try {
-    const res = await fetch(`${INNERTUBE_API}/search?prettyPrint=false`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        context: { client: INNERTUBE_CLIENT },
-        query,
-        params: "EgWKAQIIAWoKEAMQBBAKEAkQBQ%3D%3D", // music filter
-      }),
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-
-    const contents =
-      data?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents || [];
-
-    const results: { url: string; title: string; uploaderName: string; duration: number }[] = [];
-    for (const section of contents) {
-      const items = section?.itemSectionRenderer?.contents || [];
-      for (const item of items) {
-        const video = item?.videoRenderer;
-        if (!video?.videoId) continue;
-        const lengthText = video.lengthText?.simpleText || "0:00";
-        const parts = lengthText.split(":").map(Number);
-        const duration = parts.length === 3 ? parts[0] * 3600 + parts[1] * 60 + parts[2] : parts[0] * 60 + (parts[1] || 0);
-        results.push({
-          url: `/watch?v=${video.videoId}`,
-          title: video.title?.runs?.[0]?.text || "",
-          uploaderName: video.ownerText?.runs?.[0]?.text || "",
-          duration,
-        });
-      }
-    }
-    if (results.length > 0) console.log("[youtube] innertube search returned", results.length, "results");
-    return results;
-  } catch (e) {
-    console.log("[youtube] innertube search failed:", e instanceof Error ? e.message : e);
-    return [];
-  }
-}
-
 async function pipedSearch(query: string, apiUrl: string): Promise<{ url: string; title: string; uploaderName: string; duration: number }[]> {
   const res = await fetch(
     `${apiUrl}/search?q=${encodeURIComponent(query)}&filter=music_songs`,
@@ -129,17 +76,11 @@ async function pipedSearch(query: string, apiUrl: string): Promise<{ url: string
 }
 
 async function youtubeSearch(query: string): Promise<{ url: string; title: string; uploaderName: string; duration: number }[]> {
-  // Try official YouTube innertube first
-  const innertubeResults = await innertubeSearch(query);
-  if (innertubeResults.length > 0) return innertubeResults;
-
-  // Fall back through piped instances
   for (const instance of PIPED_INSTANCES) {
     console.log("[youtube] trying piped instance:", instance);
     const results = await pipedSearch(query, instance);
     if (results.length > 0) return results;
   }
-
   return [];
 }
 
@@ -196,37 +137,6 @@ export async function searchYouTube(query: string, match?: SearchOptions): Promi
   }
 }
 
-async function innertubeStreamUrl(videoId: string): Promise<string | null> {
-  try {
-    const res = await fetch(`${INNERTUBE_API}/player?prettyPrint=false`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        context: { client: INNERTUBE_CLIENT },
-        videoId,
-      }),
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-
-    const formats = [
-      ...(data.streamingData?.adaptiveFormats || []),
-    ];
-
-    const audioFormats = formats
-      .filter((f: { mimeType?: string; url?: string }) => f.mimeType?.startsWith("audio/") && f.url)
-      .sort((a: { bitrate?: number }, b: { bitrate?: number }) => (b.bitrate || 0) - (a.bitrate || 0));
-
-    if (audioFormats.length === 0) return null;
-    console.log("[youtube] innertube stream: got", audioFormats.length, "audio formats, best:", audioFormats[0].bitrate, "bps");
-    return audioFormats[0].url;
-  } catch (e) {
-    console.log("[youtube] innertube player failed:", e instanceof Error ? e.message : e);
-    return null;
-  }
-}
-
 async function pipedStreamUrl(videoId: string, apiUrl: string): Promise<string | null> {
   try {
     const res = await fetch(`${apiUrl}/streams/${videoId}`, {
@@ -245,11 +155,6 @@ async function pipedStreamUrl(videoId: string, apiUrl: string): Promise<string |
 }
 
 export async function getAudioStreamUrl(videoId: string): Promise<string> {
-  // Try official YouTube innertube first
-  const innertubeUrl = await innertubeStreamUrl(videoId);
-  if (innertubeUrl) return innertubeUrl;
-
-  // Fall back through piped instances
   for (const instance of PIPED_INSTANCES) {
     console.log("[youtube] trying piped stream:", instance);
     const url = await pipedStreamUrl(videoId, instance);
@@ -276,33 +181,6 @@ function parseYouTubeTitle(title: string): { artist: string; name: string } {
 }
 
 async function fetchVideoInfo(videoId: string): Promise<{ title: string; uploaderName: string; thumbnailUrl: string; duration: number; uploadDate: string | null }> {
-  // Try innertube first
-  try {
-    const res = await fetch(`${INNERTUBE_API}/player?prettyPrint=false`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        context: { client: INNERTUBE_CLIENT },
-        videoId,
-      }),
-      signal: AbortSignal.timeout(15000),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const details = data.videoDetails;
-      if (details) {
-        return {
-          title: details.title || "Unknown",
-          uploaderName: details.author || "",
-          thumbnailUrl: details.thumbnail?.thumbnails?.slice(-1)[0]?.url || "",
-          duration: parseInt(details.lengthSeconds || "0", 10),
-          uploadDate: null,
-        };
-      }
-    }
-  } catch {}
-
-  // Fall back through piped instances
   for (const instance of PIPED_INSTANCES) {
     try {
       const res = await fetch(`${instance}/streams/${videoId}`, {

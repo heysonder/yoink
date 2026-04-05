@@ -37,7 +37,7 @@ nothing is stored on the server after your request completes.
 - [Spotify Web API](https://developer.spotify.com/documentation/web-api) for metadata
 - [Deezer](https://developers.deezer.com) for lossless audio and metadata fallback
 - [Tidal](https://developer.tidal.com) for hi-res audio
-- [YouTube](https://youtube.com) for audio (direct via innertube, with [Piped](https://github.com/TeamPiped/Piped) fallback)
+- [Piped](https://github.com/TeamPiped/Piped) for youtube audio
 - [lrclib](https://lrclib.net) + [Musixmatch](https://www.musixmatch.com) for lyrics
 - [Song.link](https://song.link) for cross-platform link resolution
 - [iTunes Search API](https://developer.apple.com/library/archive/documentation/AudioVideo/Conceptual/iTuneSearchAPI) for genre data and catalog matching
@@ -103,7 +103,7 @@ the ARL token lasts 3-6 months before expiring. you can cancel the trial before 
 
 ### youtube audio source
 
-yoink uses youtube as a fallback audio source when deezer and tidal aren't configured. audio is fetched directly from youtube via the innertube API, with [piped](https://github.com/TeamPiped/Piped) as a secondary fallback. if you want to use your own piped instance, set `PIPED_API_URL` — you can [self-host piped](https://docs.piped.video/docs/self-hosting/) for better reliability. note that youtube audio is ~160kbps opus, not lossless.
+yoink uses youtube as a fallback audio source when deezer and tidal aren't configured. audio is fetched via [piped](https://github.com/TeamPiped/Piped), a youtube proxy. public piped instances can be unreliable — for best results, [self-host your own piped instance](https://docs.piped.video/docs/self-hosting/) and set `PIPED_API_URL` to point to it. note that youtube audio is ~160kbps opus, not lossless.
 
 ## rate limits
 
