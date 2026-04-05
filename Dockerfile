@@ -12,6 +12,8 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+ARG GIT_COMMIT=unknown
+ENV NEXT_PUBLIC_GIT_COMMIT=$GIT_COMMIT
 RUN npm run build
 
 FROM base AS runner

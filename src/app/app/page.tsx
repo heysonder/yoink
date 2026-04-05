@@ -574,31 +574,33 @@ export default function Home() {
                 onChange={setFormat}
                 disabled={state === "downloading"}
               />
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-[10px] tracking-wider">
                 <button
                   onClick={() => setGenreSource(genreSource === "spotify" ? "itunes" : "spotify")}
                   disabled={state === "downloading"}
-                  className={`text-[10px] tracking-wider transition-colors duration-200 disabled:opacity-50 ${
+                  className={`transition-colors duration-200 disabled:opacity-50 ${
                     genreSource === "itunes" ? "text-lavender" : "text-overlay0/50 hover:text-overlay0/70"
                   }`}
                 >
-                  {genreSource === "itunes" ? "[ iTunes genres ✓ ]" : "[ iTunes genres ]"}
+                  {genreSource === "itunes" ? "iTunes genres ✓" : "iTunes genres"}
                 </button>
+                <span className="text-overlay0/20">/</span>
                 <div className="group relative">
                   <button
                     onClick={() => setSyncedLyrics(!syncedLyrics)}
                     disabled={state === "downloading"}
-                    className={`text-[10px] tracking-wider transition-colors duration-200 disabled:opacity-50 ${
+                    className={`transition-colors duration-200 disabled:opacity-50 ${
                       syncedLyrics ? "text-lavender" : "text-overlay0/50 hover:text-overlay0/70"
                     }`}
                   >
-                    {syncedLyrics ? "[ synced lyrics ✓ ]" : "[ synced lyrics ]"}
+                    {syncedLyrics ? "synced lyrics ✓" : "synced lyrics"}
                   </button>
                   <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 rounded-md bg-surface0 text-[9px] text-subtext0 tracking-wider whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200">
                     embeds LRC timestamps — works with foobar2000, Poweramp, Plexamp
                   </div>
                 </div>
-                <span className="text-[10px] text-overlay0/30 tracking-wider">
+                <span className="text-overlay0/20">|</span>
+                <span className="text-overlay0/30">
                   {format === "mp3" ? "~8mb per track" : "~40mb per track"}
                 </span>
               </div>
