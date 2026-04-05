@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { execFile } from "child_process";
 import { promisify } from "util";
-import { readFileSync } from "fs";
 
 const execFileAsync = promisify(execFile);
 
@@ -81,10 +80,7 @@ export async function GET() {
 
   return NextResponse.json({
     status: allOk ? "ok" : "degraded",
-    version: (() => {
-      try { return readFileSync(".git-commit", "utf-8").trim(); } catch {}
-      return process.env.GIT_COMMIT || "dev";
-    })(),
+    version: process.env.GIT_COMMIT || "dev",
     uptime: Math.floor(process.uptime()),
     latency: `${Date.now() - start}ms`,
     checks,
