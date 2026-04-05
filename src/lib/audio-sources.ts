@@ -126,10 +126,7 @@ async function tryYouTube(track: TrackInfo): Promise<AudioResult> {
   const ALLOWED_AUDIO_HOSTS = [
     "googlevideo.com",
     "youtube.com",
-    "pipedproxy.kavin.rocks",
-    "pipedproxy.adminforge.de",
-    "pipedproxy.leptons.xyz",
-    "pipedproxy.drgns.space",
+    "proxy.piped.private.coffee",
   ];
 
   try {

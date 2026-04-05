@@ -75,7 +75,7 @@ requires [ffmpeg](https://ffmpeg.org/download.html) installed locally.
 |---|---|---|
 | `SPOTIFY_CLIENT_ID` | yes | spotify app client id ([create one](https://developer.spotify.com/dashboard)) |
 | `SPOTIFY_CLIENT_SECRET` | yes | spotify app client secret |
-| `PIPED_API_URL` | no | piped instance url (default: `pipedapi.kavin.rocks`) |
+| `PIPED_API_URL` | no | piped instance url (default: `api.piped.private.coffee`) |
 | `DEEZER_ARL` | no | deezer session cookie — enables lossless audio from deezer |
 | `TIDAL_CLIENT_ID` | no | tidal app client id |
 | `TIDAL_CLIENT_SECRET` | no | tidal app client secret |
@@ -87,6 +87,23 @@ requires [ffmpeg](https://ffmpeg.org/download.html) installed locally.
 | `LRCLIB_PROXY_URL` | no | cloudflare worker proxy for lrclib if direct access is blocked |
 
 without the optional vars, yoink still works — audio is sourced from youtube instead, and you still get full metadata, album art, synced lyrics, and proper tagging. for lossless audio (flac/alac), you'll need a deezer or tidal account to provide the `DEEZER_ARL` or tidal credentials.
+
+### getting lossless audio with deezer
+
+deezer offers a **1 month free trial** of premium, which now includes hifi (lossless) streaming. this is the easiest way to get lossless downloads from yoink:
+
+1. sign up for a [deezer premium trial](https://www.deezer.com/en/offers) (no charge for the first month)
+2. log in to [deezer.com](https://www.deezer.com) in your browser
+3. open dev tools (F12) → application tab → cookies → `www.deezer.com`
+4. find the cookie named `arl` — copy its value (it's a 192-character string)
+5. set `DEEZER_ARL` in your `.env` to that value
+6. download everything you want in flac
+
+the ARL token lasts 3-6 months before expiring. you can cancel the trial before it renews if you just need it for a one-time library download.
+
+### youtube audio source
+
+yoink uses youtube as a fallback audio source when deezer and tidal aren't configured. audio is fetched directly from youtube via the innertube API, with [piped](https://github.com/TeamPiped/Piped) as a secondary fallback. if you want to use your own piped instance, set `PIPED_API_URL` — you can [self-host piped](https://docs.piped.video/docs/self-hosting/) for better reliability. note that youtube audio is ~160kbps opus, not lossless.
 
 ## rate limits
 

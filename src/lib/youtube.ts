@@ -3,10 +3,7 @@ import type { TrackInfo } from "./spotify";
 const PIPED_INSTANCES = process.env.PIPED_API_URL
   ? [process.env.PIPED_API_URL]
   : [
-      "https://pipedapi.kavin.rocks",
-      "https://pipedapi.adminforge.de",
-      "https://pipedapi.leptons.xyz",
-      "https://pipedapi.drgns.space",
+      "https://api.piped.private.coffee",
     ];
 
 // YouTube innertube API for direct access (no piped dependency)
