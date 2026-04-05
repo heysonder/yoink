@@ -1,6 +1,8 @@
 services:
   yoink:
     build: .
+    volumes:
+      - ./.git-commit:/app/.git-commit:ro
     ports:
       - "3000:3000"
     env_file: .env
