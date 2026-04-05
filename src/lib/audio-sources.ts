@@ -128,7 +128,8 @@ async function tryYouTube(track: TrackInfo): Promise<AudioResult> {
     "youtube.com",
     "pipedproxy.kavin.rocks",
     "pipedproxy.adminforge.de",
-    "withmilo.xyz",
+    "pipedproxy.leptons.xyz",
+    "pipedproxy.drgns.space",
   ];
 
   try {

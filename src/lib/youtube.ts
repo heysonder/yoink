@@ -1,6 +1,23 @@
 import type { TrackInfo } from "./spotify";
 
-const PIPED_API = process.env.PIPED_API_URL || "https://pipedapi.kavin.rocks";
+const PIPED_INSTANCES = process.env.PIPED_API_URL
+  ? [process.env.PIPED_API_URL]
+  : [
+      "https://pipedapi.kavin.rocks",
+      "https://pipedapi.adminforge.de",
+      "https://pipedapi.leptons.xyz",
+      "https://pipedapi.drgns.space",
+    ];
+
+// YouTube innertube API for direct access (no piped dependency)
+const INNERTUBE_API = "https://www.youtube.com/youtubei/v1";
+const INNERTUBE_CLIENT = {
+  clientName: "ANDROID",
+  clientVersion: "19.09.37",
+  androidSdkVersion: 30,
+  hl: "en",
+  gl: "US",
+};
 
 function normalize(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -58,9 +75,52 @@ function scoreResults(
   }).sort((a, b) => b.score - a.score);
 }
 
-async function pipedSearch(query: string): Promise<{ url: string; title: string; uploaderName: string; duration: number }[]> {
+async function innertubeSearch(query: string): Promise<{ url: string; title: string; uploaderName: string; duration: number }[]> {
+  try {
+    const res = await fetch(`${INNERTUBE_API}/search?prettyPrint=false`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        context: { client: INNERTUBE_CLIENT },
+        query,
+        params: "EgWKAQIIAWoKEAMQBBAKEAkQBQ%3D%3D", // music filter
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+
+    const contents =
+      data?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents || [];
+
+    const results: { url: string; title: string; uploaderName: string; duration: number }[] = [];
+    for (const section of contents) {
+      const items = section?.itemSectionRenderer?.contents || [];
+      for (const item of items) {
+        const video = item?.videoRenderer;
+        if (!video?.videoId) continue;
+        const lengthText = video.lengthText?.simpleText || "0:00";
+        const parts = lengthText.split(":").map(Number);
+        const duration = parts.length === 3 ? parts[0] * 3600 + parts[1] * 60 + parts[2] : parts[0] * 60 + (parts[1] || 0);
+        results.push({
+          url: `/watch?v=${video.videoId}`,
+          title: video.title?.runs?.[0]?.text || "",
+          uploaderName: video.ownerText?.runs?.[0]?.text || "",
+          duration,
+        });
+      }
+    }
+    if (results.length > 0) console.log("[youtube] innertube search returned", results.length, "results");
+    return results;
+  } catch (e) {
+    console.log("[youtube] innertube search failed:", e instanceof Error ? e.message : e);
+    return [];
+  }
+}
+
+async function pipedSearch(query: string, apiUrl: string): Promise<{ url: string; title: string; uploaderName: string; duration: number }[]> {
   const res = await fetch(
-    `${PIPED_API}/search?q=${encodeURIComponent(query)}&filter=music_songs`,
+    `${apiUrl}/search?q=${encodeURIComponent(query)}&filter=music_songs`,
     { signal: AbortSignal.timeout(15000) }
   );
   if (!res.ok) return [];
@@ -71,9 +131,24 @@ async function pipedSearch(query: string): Promise<{ url: string; title: string;
   ) as { url: string; title: string; uploaderName: string; duration: number }[];
 }
 
+async function youtubeSearch(query: string): Promise<{ url: string; title: string; uploaderName: string; duration: number }[]> {
+  // Try official YouTube innertube first
+  const innertubeResults = await innertubeSearch(query);
+  if (innertubeResults.length > 0) return innertubeResults;
+
+  // Fall back through piped instances
+  for (const instance of PIPED_INSTANCES) {
+    console.log("[youtube] trying piped instance:", instance);
+    const results = await pipedSearch(query, instance);
+    if (results.length > 0) return results;
+  }
+
+  return [];
+}
+
 export async function searchYouTube(query: string, match?: SearchOptions): Promise<string | null> {
   try {
-    const streams = await pipedSearch(query);
+    const streams = await youtubeSearch(query);
     if (streams.length === 0) return null;
 
     // No match criteria — return first result (legacy behavior)
@@ -95,7 +170,7 @@ export async function searchYouTube(query: string, match?: SearchOptions): Promi
     if (match.album) {
       console.log("[youtube] score too low, retrying with album:", match.album);
       const refinedQuery = `${match.artist} - ${match.title} ${match.album}`;
-      const refinedStreams = await pipedSearch(refinedQuery);
+      const refinedStreams = await youtubeSearch(refinedQuery);
       if (refinedStreams.length > 0) {
         const refinedScored = scoreResults(refinedStreams, match);
         const refinedBest = refinedScored[0];
@@ -124,25 +199,67 @@ export async function searchYouTube(query: string, match?: SearchOptions): Promi
   }
 }
 
+async function innertubeStreamUrl(videoId: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${INNERTUBE_API}/player?prettyPrint=false`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        context: { client: INNERTUBE_CLIENT },
+        videoId,
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+
+    const formats = [
+      ...(data.streamingData?.adaptiveFormats || []),
+    ];
+
+    const audioFormats = formats
+      .filter((f: { mimeType?: string; url?: string }) => f.mimeType?.startsWith("audio/") && f.url)
+      .sort((a: { bitrate?: number }, b: { bitrate?: number }) => (b.bitrate || 0) - (a.bitrate || 0));
+
+    if (audioFormats.length === 0) return null;
+    console.log("[youtube] innertube stream: got", audioFormats.length, "audio formats, best:", audioFormats[0].bitrate, "bps");
+    return audioFormats[0].url;
+  } catch (e) {
+    console.log("[youtube] innertube player failed:", e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
+async function pipedStreamUrl(videoId: string, apiUrl: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${apiUrl}/streams/${videoId}`, {
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const audioStreams: { url: string; mimeType: string; bitrate: number }[] =
+      data.audioStreams || [];
+    if (audioStreams.length === 0) return null;
+    const best = audioStreams.sort((a, b) => b.bitrate - a.bitrate)[0];
+    return best.url;
+  } catch {
+    return null;
+  }
+}
+
 export async function getAudioStreamUrl(videoId: string): Promise<string> {
-  const res = await fetch(`${PIPED_API}/streams/${videoId}`, {
-    signal: AbortSignal.timeout(15000),
-  });
+  // Try official YouTube innertube first
+  const innertubeUrl = await innertubeStreamUrl(videoId);
+  if (innertubeUrl) return innertubeUrl;
 
-  if (!res.ok) {
-    throw new Error(`Piped streams API error: ${res.status}`);
+  // Fall back through piped instances
+  for (const instance of PIPED_INSTANCES) {
+    console.log("[youtube] trying piped stream:", instance);
+    const url = await pipedStreamUrl(videoId, instance);
+    if (url) return url;
   }
 
-  const data = await res.json();
-  const audioStreams: { url: string; mimeType: string; bitrate: number }[] =
-    data.audioStreams || [];
-
-  if (audioStreams.length === 0) {
-    throw new Error("No audio streams available");
-  }
-
-  const best = audioStreams.sort((a, b) => b.bitrate - a.bitrate)[0];
-  return best.url;
+  throw new Error("No audio streams available from any source");
 }
 
 function formatDuration(seconds: number): string {
@@ -161,15 +278,59 @@ function parseYouTubeTitle(title: string): { artist: string; name: string } {
   return { artist: "Unknown Artist", name: title.trim() };
 }
 
+async function fetchVideoInfo(videoId: string): Promise<{ title: string; uploaderName: string; thumbnailUrl: string; duration: number; uploadDate: string | null }> {
+  // Try innertube first
+  try {
+    const res = await fetch(`${INNERTUBE_API}/player?prettyPrint=false`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        context: { client: INNERTUBE_CLIENT },
+        videoId,
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const details = data.videoDetails;
+      if (details) {
+        return {
+          title: details.title || "Unknown",
+          uploaderName: details.author || "",
+          thumbnailUrl: details.thumbnail?.thumbnails?.slice(-1)[0]?.url || "",
+          duration: parseInt(details.lengthSeconds || "0", 10),
+          uploadDate: null,
+        };
+      }
+    }
+  } catch {}
+
+  // Fall back through piped instances
+  for (const instance of PIPED_INSTANCES) {
+    try {
+      const res = await fetch(`${instance}/streams/${videoId}`, {
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+      return {
+        title: data.title || "Unknown",
+        uploaderName: data.uploaderName || "",
+        thumbnailUrl: data.thumbnailUrl || "",
+        duration: data.duration || 0,
+        uploadDate: data.uploadDate || null,
+      };
+    } catch {
+      continue;
+    }
+  }
+
+  throw new Error("Could not fetch YouTube video info from any source");
+}
+
 export async function getYouTubeTrackInfo(videoId: string): Promise<TrackInfo> {
-  const res = await fetch(`${PIPED_API}/streams/${videoId}`, {
-    signal: AbortSignal.timeout(15000),
-  });
-
-  if (!res.ok) throw new Error("Could not fetch YouTube video info");
-
-  const data = await res.json();
-  const { artist, name } = parseYouTubeTitle(data.title || "Unknown");
+  const data = await fetchVideoInfo(videoId);
+  const { artist, name } = parseYouTubeTitle(data.title);
 
   return {
     name,
@@ -182,7 +343,7 @@ export async function getYouTubeTrackInfo(videoId: string): Promise<TrackInfo> {
     isrc: null,
     genre: null,
     releaseDate: data.uploadDate || null,
-    spotifyUrl: "", // Will be filled if we find a Spotify match
+    spotifyUrl: "",
     explicit: false,
     trackNumber: null,
     discNumber: null,

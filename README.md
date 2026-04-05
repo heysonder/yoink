@@ -1,14 +1,12 @@
 # yoink
 
-paste a spotify link. get the file.
+paste a spotify or apple music link. get the file.
 
 **[yoinkify.com](https://yoinkify.com)**
 
 <p align="center">
   <img src="docs/demo.gif" alt="yoink demo" width="720" />
 </p>
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/O5O31P50IY)
 
 ## features
 
@@ -39,7 +37,7 @@ nothing is stored on the server after your request completes.
 - [Spotify Web API](https://developer.spotify.com/documentation/web-api) for metadata
 - [Deezer](https://developers.deezer.com) for lossless audio and metadata fallback
 - [Tidal](https://developer.tidal.com) for hi-res audio
-- [Piped API](https://github.com/TeamPiped/Piped) for youtube audio
+- [YouTube](https://youtube.com) for audio (direct via innertube, with [Piped](https://github.com/TeamPiped/Piped) fallback)
 - [lrclib](https://lrclib.net) + [Musixmatch](https://www.musixmatch.com) for lyrics
 - [Song.link](https://song.link) for cross-platform link resolution
 - [iTunes Search API](https://developer.apple.com/library/archive/documentation/AudioVideo/Conceptual/iTuneSearchAPI) for genre data and catalog matching
@@ -49,7 +47,7 @@ nothing is stored on the server after your request completes.
 ### docker (recommended)
 
 ```bash
-git clone https://github.com/chasemarshall/yoink.git
+git clone https://github.com/heysonder/yoink.git
 cd yoink
 cp .env.example .env
 # fill in your env vars (see below)
@@ -61,7 +59,7 @@ yoink will be running on `http://localhost:3000`.
 ### local dev
 
 ```bash
-git clone https://github.com/chasemarshall/yoink.git
+git clone https://github.com/heysonder/yoink.git
 cd yoink
 npm install
 cp .env.example .env.local
@@ -88,7 +86,7 @@ requires [ffmpeg](https://ffmpeg.org/download.html) installed locally.
 | `MUSIXMATCH_TOKEN` | no | musixmatch lyrics as fallback when lrclib misses |
 | `LRCLIB_PROXY_URL` | no | cloudflare worker proxy for lrclib if direct access is blocked |
 
-without the optional vars, yoink still works — it just uses youtube as the audio source and lrclib for lyrics.
+without the optional vars, yoink still works — audio is sourced from youtube instead, and you still get full metadata, album art, synced lyrics, and proper tagging. for lossless audio (flac/alac), you'll need a deezer or tidal account to provide the `DEEZER_ARL` or tidal credentials.
 
 ## rate limits
 
@@ -104,6 +102,10 @@ self-hosted instances have no rate limits by default — adjust in `src/lib/rate
 ## attribution
 
 if you fork or self-host yoink, a "powered by [yoink](https://yoinkify.com)" mention is appreciated but not required.
+
+## support
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/O5O31P50IY)
 
 ## license
 
