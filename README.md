@@ -88,9 +88,11 @@ requires [ffmpeg](https://ffmpeg.org/download.html) installed locally.
 
 no env vars are required — yoink works out of the box with public APIs for metadata and youtube (via piped) for audio. however, public piped instances are unstable and may cause download failures — for reliable youtube downloads, [self-host piped](https://docs.piped.video/docs/self-hosting/) or provide deezer/tidal credentials. for lossless audio (flac/alac), you'll need a deezer or tidal account to provide the `DEEZER_ARL` or tidal credentials.
 
-### getting lossless audio with deezer
+### getting lossless audio with deezer (self-hosted only)
 
-deezer offers a **1 month free trial** of premium, which now includes hifi (lossless) streaming. this is the easiest way to get lossless downloads from yoink:
+if you're self-hosting yoink, you can enable lossless (flac) downloads by providing a deezer ARL token. the web version at [yoinkify.com](https://yoinkify.com) already has this configured — this section is only for self-hosted instances.
+
+deezer offers a **1 month free trial** of premium, which now includes hifi (lossless) streaming:
 
 1. sign up for a [deezer premium trial](https://www.deezer.com/en/offers) (no charge for the first month)
 2. log in to [deezer.com](https://www.deezer.com) in your browser
