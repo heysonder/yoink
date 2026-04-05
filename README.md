@@ -4,6 +4,10 @@ paste a spotify link. get the file.
 
 **[yoinkify.com](https://yoinkify.com)**
 
+<p align="center">
+  <img src="docs/demo.gif" alt="yoink demo" width="720" />
+</p>
+
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/O5O31P50IY)
 
 ## features
