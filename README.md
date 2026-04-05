@@ -73,9 +73,9 @@ requires [ffmpeg](https://ffmpeg.org/download.html) installed locally.
 
 | variable | required | description |
 |---|---|---|
-| `SPOTIFY_CLIENT_ID` | yes | spotify app client id ([create one](https://developer.spotify.com/dashboard)) |
-| `SPOTIFY_CLIENT_SECRET` | yes | spotify app client secret |
-| `PIPED_API_URL` | no | piped instance url (default: `api.piped.private.coffee`) |
+| `SPOTIFY_CLIENT_ID` | no | spotify app client id ([create one](https://developer.spotify.com/dashboard)) — falls back to public APIs if not set |
+| `SPOTIFY_CLIENT_SECRET` | no | spotify app client secret |
+| `PIPED_API_URL` | no | piped instance url — we recommend [self-hosting piped](https://docs.piped.video/docs/self-hosting/) as public instances are unreliable |
 | `DEEZER_ARL` | no | deezer session cookie — enables lossless audio from deezer |
 | `TIDAL_CLIENT_ID` | no | tidal app client id |
 | `TIDAL_CLIENT_SECRET` | no | tidal app client secret |
@@ -86,7 +86,7 @@ requires [ffmpeg](https://ffmpeg.org/download.html) installed locally.
 | `MUSIXMATCH_TOKEN` | no | musixmatch lyrics as fallback when lrclib misses |
 | `LRCLIB_PROXY_URL` | no | cloudflare worker proxy for lrclib if direct access is blocked |
 
-without the optional vars, yoink still works — audio is sourced from youtube instead, and you still get full metadata, album art, synced lyrics, and proper tagging. for lossless audio (flac/alac), you'll need a deezer or tidal account to provide the `DEEZER_ARL` or tidal credentials.
+no env vars are required — yoink works out of the box with public APIs for metadata and youtube (via piped) for audio. however, public piped instances are unstable and may cause download failures — for reliable youtube downloads, [self-host piped](https://docs.piped.video/docs/self-hosting/) or provide deezer/tidal credentials. for lossless audio (flac/alac), you'll need a deezer or tidal account to provide the `DEEZER_ARL` or tidal credentials.
 
 ### getting lossless audio with deezer
 
