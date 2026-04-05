@@ -1,4 +1,9 @@
+import { execFile } from "child_process";
+import { promisify } from "util";
 import type { TrackInfo } from "./spotify";
+
+const execFileAsync = promisify(execFile);
+const YT_DLP = process.env.YT_DLP_PATH || "yt-dlp";
 
 const PIPED_INSTANCES = process.env.PIPED_API_URL
   ? [process.env.PIPED_API_URL]
@@ -75,13 +80,50 @@ async function pipedSearch(query: string, apiUrl: string): Promise<{ url: string
   ) as { url: string; title: string; uploaderName: string; duration: number }[];
 }
 
+async function ytdlpSearch(query: string): Promise<{ url: string; title: string; uploaderName: string; duration: number }[]> {
+  try {
+    const { stdout } = await execFileAsync(YT_DLP, [
+      `ytsearch5:${query}`,
+      "--dump-json",
+      "--no-download",
+      "--flat-playlist",
+      "--no-warnings",
+    ], { timeout: 20000 });
+
+    const results: { url: string; title: string; uploaderName: string; duration: number }[] = [];
+    for (const line of stdout.trim().split("\n")) {
+      if (!line) continue;
+      try {
+        const data = JSON.parse(line);
+        if (data.id) {
+          results.push({
+            url: `/watch?v=${data.id}`,
+            title: data.title || "",
+            uploaderName: data.uploader || data.channel || "",
+            duration: data.duration || 0,
+          });
+        }
+      } catch {}
+    }
+    if (results.length > 0) console.log("[youtube] yt-dlp search returned", results.length, "results");
+    return results;
+  } catch (e) {
+    console.log("[youtube] yt-dlp search failed:", e instanceof Error ? e.message : e);
+    return [];
+  }
+}
+
 async function youtubeSearch(query: string): Promise<{ url: string; title: string; uploaderName: string; duration: number }[]> {
+  // Try piped first (faster, no subprocess)
   for (const instance of PIPED_INSTANCES) {
     console.log("[youtube] trying piped instance:", instance);
     const results = await pipedSearch(query, instance);
     if (results.length > 0) return results;
   }
-  return [];
+
+  // Fall back to yt-dlp
+  console.log("[youtube] piped failed, trying yt-dlp");
+  return ytdlpSearch(query);
 }
 
 export async function searchYouTube(query: string, match?: SearchOptions): Promise<string | null> {
@@ -154,6 +196,41 @@ async function pipedStreamUrl(videoId: string, apiUrl: string): Promise<string |
   }
 }
 
+// yt-dlp downloads the audio file directly (avoids 403s from googlevideo)
+export async function ytdlpDownload(videoId: string): Promise<{ buffer: Buffer; format: string } | null> {
+  const { join } = await import("path");
+  const { tmpdir } = await import("os");
+  const { readFile, unlink } = await import("fs/promises");
+
+  const tempPath = join(tmpdir(), `yt-dlp-${videoId}-${Date.now()}`);
+
+  try {
+    const { stdout } = await execFileAsync(YT_DLP, [
+      `https://www.youtube.com/watch?v=${videoId}`,
+      "-f", "bestaudio/best",
+      "-o", `${tempPath}.%(ext)s`,
+      "--no-warnings",
+      "--no-playlist",
+      "--print", "after_move:filepath",
+    ], { timeout: 60000 });
+
+    const filePath = stdout.trim().split("\n").pop()?.trim();
+    if (!filePath) return null;
+
+    const buffer = await readFile(filePath);
+    const ext = filePath.split(".").pop() || "webm";
+    console.log("[youtube] yt-dlp downloaded:", ext, `(${(buffer.length / 1024 / 1024).toFixed(1)}MB)`);
+
+    // Clean up temp file
+    try { await unlink(filePath); } catch {}
+
+    return { buffer, format: ext };
+  } catch (e) {
+    console.log("[youtube] yt-dlp download failed:", e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
 export async function getAudioStreamUrl(videoId: string): Promise<string> {
   for (const instance of PIPED_INSTANCES) {
     console.log("[youtube] trying piped stream:", instance);
@@ -161,7 +238,7 @@ export async function getAudioStreamUrl(videoId: string): Promise<string> {
     if (url) return url;
   }
 
-  throw new Error("No audio streams available from any source");
+  throw new Error("No audio streams available from piped — yt-dlp fallback should be used");
 }
 
 function formatDuration(seconds: number): string {
@@ -181,6 +258,7 @@ function parseYouTubeTitle(title: string): { artist: string; name: string } {
 }
 
 async function fetchVideoInfo(videoId: string): Promise<{ title: string; uploaderName: string; thumbnailUrl: string; duration: number; uploadDate: string | null }> {
+  // Try piped first
   for (const instance of PIPED_INSTANCES) {
     try {
       const res = await fetch(`${instance}/streams/${videoId}`, {
@@ -199,6 +277,26 @@ async function fetchVideoInfo(videoId: string): Promise<{ title: string; uploade
       continue;
     }
   }
+
+  // Fall back to yt-dlp
+  try {
+    const { stdout } = await execFileAsync(YT_DLP, [
+      `https://www.youtube.com/watch?v=${videoId}`,
+      "--dump-json",
+      "--no-download",
+      "--no-warnings",
+      "--no-playlist",
+    ], { timeout: 20000 });
+
+    const data = JSON.parse(stdout);
+    return {
+      title: data.title || "Unknown",
+      uploaderName: data.uploader || data.channel || "",
+      thumbnailUrl: data.thumbnail || "",
+      duration: data.duration || 0,
+      uploadDate: data.upload_date || null,
+    };
+  } catch {}
 
   throw new Error("Could not fetch YouTube video info from any source");
 }

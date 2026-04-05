@@ -49,10 +49,10 @@ nothing is stored on the server after your request completes.
 ```bash
 git clone https://github.com/heysonder/yoink.git
 cd yoink
-cp .env.example .env
-# fill in your env vars (see below)
 docker compose up -d
 ```
+
+that's it — yoink works out of the box with zero configuration. audio is sourced from youtube via yt-dlp, and metadata comes from public APIs. for lossless audio or better reliability, copy `.env.example` to `.env` and add your credentials (see below).
 
 yoink will be running on `http://localhost:3000`.
 

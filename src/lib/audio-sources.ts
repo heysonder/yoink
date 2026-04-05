@@ -2,7 +2,7 @@ import type { TrackInfo } from "./spotify";
 import { resolveSonglink } from "./songlink";
 import { fetchDeezerAudio, lookupDeezerByIsrc, searchDeezerByTitleArtist } from "./deezer";
 import { lookupTidalByIsrc, searchTidalByTitleArtist, fetchTidalAudio } from "./tidal";
-import { searchYouTube, getAudioStreamUrl } from "./youtube";
+import { searchYouTube, getAudioStreamUrl, ytdlpDownload } from "./youtube";
 import type { AudioQualityInfo } from "./ffprobe";
 import type { AcoustIdResult } from "./acoustid";
 
@@ -121,42 +121,51 @@ async function tryYouTube(track: TrackInfo): Promise<AudioResult> {
     throw new Error("couldn't find this track on any source — it may not be available yet or the title may differ on streaming platforms");
   }
 
-  const audioUrl = await getAudioStreamUrl(videoId);
-
-  const ALLOWED_AUDIO_HOSTS = [
-    "googlevideo.com",
-    "youtube.com",
-    "proxy.piped.private.coffee",
-  ];
-
+  // Try piped stream URL first
   try {
+    const audioUrl = await getAudioStreamUrl(videoId);
+
+    const ALLOWED_AUDIO_HOSTS = [
+      "googlevideo.com",
+      "youtube.com",
+      "proxy.piped.private.coffee",
+    ];
+
     const parsed = new URL(audioUrl);
     const allowed = ALLOWED_AUDIO_HOSTS.some((host) =>
       parsed.hostname.endsWith(host)
     );
-    if (!allowed) throw new Error("Audio source URL is not from an allowed host");
+    if (!allowed) throw new Error("not allowed host");
+
+    const audioRes = await fetch(audioUrl, {
+      signal: AbortSignal.timeout(60000),
+    });
+
+    if (!audioRes.ok) throw new Error(`piped fetch failed: ${audioRes.status}`);
+
+    const buffer = Buffer.from(await audioRes.arrayBuffer());
+    if (buffer.length === 0) throw new Error("empty audio");
+
+    return {
+      buffer,
+      source: "youtube",
+      format: "webm",
+      bitrate: 160,
+    };
   } catch (e) {
-    if (e instanceof Error && e.message.includes("allowed host")) throw e;
-    throw new Error("Invalid audio source URL");
+    console.log("[audio] piped stream failed, trying yt-dlp direct download:", e instanceof Error ? e.message : e);
   }
 
-  const audioRes = await fetch(audioUrl, {
-    signal: AbortSignal.timeout(60000),
-  });
-
-  if (!audioRes.ok) {
-    throw new Error(`Audio download failed: ${audioRes.status}`);
-  }
-
-  const buffer = Buffer.from(await audioRes.arrayBuffer());
-  if (buffer.length === 0) {
-    throw new Error("Downloaded audio is empty");
+  // Fall back to yt-dlp direct download
+  const result = await ytdlpDownload(videoId);
+  if (!result || result.buffer.length === 0) {
+    throw new Error("couldn't download audio from any source");
   }
 
   return {
-    buffer,
+    buffer: result.buffer,
     source: "youtube",
-    format: "webm",
+    format: result.format as "mp3" | "flac" | "webm",
     bitrate: 160,
   };
 }
