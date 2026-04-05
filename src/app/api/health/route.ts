@@ -80,7 +80,6 @@ export async function GET() {
 
   return NextResponse.json({
     status: allOk ? "ok" : "degraded",
-    version: process.env.GIT_COMMIT || "dev",
     uptime: Math.floor(process.uptime()),
     latency: `${Date.now() - start}ms`,
     checks,
