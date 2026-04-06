@@ -131,6 +131,14 @@ async function tryYouTube(track: TrackInfo): Promise<AudioResult> {
       "proxy.piped.private.coffee",
     ];
 
+    // Also allow the configured piped instance's hostname
+    if (process.env.PIPED_API_URL) {
+      try {
+        const pipedHost = new URL(process.env.PIPED_API_URL).hostname;
+        ALLOWED_AUDIO_HOSTS.push(pipedHost);
+      } catch {}
+    }
+
     const parsed = new URL(audioUrl);
     const allowed = ALLOWED_AUDIO_HOSTS.some((host) =>
       parsed.hostname.endsWith(host)
