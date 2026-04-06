@@ -4,6 +4,7 @@ import { searchItunesTrack } from "@/lib/itunes";
 import { fetchDeezerTrackMetadata } from "@/lib/deezer";
 import { rateLimit } from "@/lib/ratelimit";
 import { getRequestSource } from "@/lib/request-source";
+import { getClientIp, getRequestLogId, summarizeTextForLogs } from "@/lib/request-privacy";
 
 async function searchDeezer(query: string, limit = 8): Promise<TrackInfo[]> {
   const res = await fetch(
@@ -26,7 +27,8 @@ async function searchDeezer(query: string, limit = 8): Promise<TrackInfo[]> {
 
 export async function GET(request: NextRequest) {
   try {
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getClientIp(request);
+    const logId = getRequestLogId(request);
     const source = getRequestSource(request);
     const { allowed, retryAfter } = rateLimit(`search:${ip}`, 15, 60_000);
     if (!allowed) {
@@ -41,7 +43,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "query is required" }, { status: 400 });
     }
 
-    console.log(`[search] [${source}] ${ip} → "${q}"`);
+    console.log(`[search] [${source}] ${logId} → "${summarizeTextForLogs(q)}"`);
 
     // Try Spotify first
     try {

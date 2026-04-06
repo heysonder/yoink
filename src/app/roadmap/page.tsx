@@ -372,7 +372,7 @@ export default function RoadmapPage() {
             rel="noopener noreferrer"
             className="hover:text-text transition-colors duration-200"
           >
-            github
+            source
           </a>
         </div>
       </footer>

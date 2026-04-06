@@ -4,6 +4,7 @@ import { lookupTidalVideoCover } from "@/lib/tidal";
 import { resolveTrack, resolvePlaylist, resolveAlbum, getCached, setCache } from "@/lib/resolve-track";
 import { rateLimit } from "@/lib/ratelimit";
 import { getRequestSource } from "@/lib/request-source";
+import { getClientIp, getRequestLogId, summarizeUrlForLogs } from "@/lib/request-privacy";
 
 async function enrichWithVideoCover(track: TrackInfo): Promise<TrackInfo> {
   try {
@@ -17,12 +18,11 @@ async function enrichWithVideoCover(track: TrackInfo): Promise<TrackInfo> {
 
 export async function POST(request: NextRequest) {
   try {
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-      || request.headers.get("cf-connecting-ip")
-      || "unknown";
+    const ip = getClientIp(request);
+    const logId = getRequestLogId(request);
     const { allowed, retryAfter } = rateLimit(`meta:${ip}`, 10, 60_000);
     if (!allowed) {
-      console.log("[ratelimit] metadata blocked:", ip);
+      console.log("[ratelimit] metadata blocked:", logId);
       return NextResponse.json(
         { error: `slow down — try again in ${retryAfter}s`, rateLimit: true },
         { status: 429, headers: { "Retry-After": String(retryAfter) } }
@@ -31,7 +31,9 @@ export async function POST(request: NextRequest) {
 
     const source = getRequestSource(request);
     const { url } = await request.json();
-    console.log(`[metadata] [${source}] ${ip} → ${typeof url === "string" ? url.slice(0, 80) : "invalid"}`);
+    console.log(
+      `[metadata] [${source}] ${logId} → ${typeof url === "string" ? summarizeUrlForLogs(url) : "invalid"}`
+    );
 
     if (!url || typeof url !== "string") {
       return NextResponse.json({ error: "URL is required" }, { status: 400 });

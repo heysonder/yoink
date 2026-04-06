@@ -1,6 +1,6 @@
 # yoink
 
-paste a spotify or apple music link. get the file.
+paste a music link. get the file.
 
 **[yoinkify.com](https://yoinkify.com)**
 

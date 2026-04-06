@@ -7,6 +7,7 @@ import { rateLimit } from "@/lib/ratelimit";
 import { resolveTrack, getCached } from "@/lib/resolve-track";
 import { getRequestSource } from "@/lib/request-source";
 import { buildEnvelopeMetadata, packEnvelope } from "@/lib/envelope";
+import { getClientIp, getRequestLogId, summarizeUrlForLogs } from "@/lib/request-privacy";
 
 const ALLOWED_ART_HOSTS = [
   "i.scdn.co",
@@ -32,7 +33,8 @@ export const maxDuration = 120;
 
 export async function POST(request: NextRequest) {
   try {
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getClientIp(request);
+    const logId = getRequestLogId(request);
     const source = getRequestSource(request);
     const { allowed, retryAfter } = rateLimit(`dl:${ip}`, 30, 60_000);
     if (!allowed) {
@@ -53,7 +55,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "URL is required" }, { status: 400 });
     }
 
-    console.log(`[prepare] [${source}] ${ip} → ${url}${requestedFormat ? ` (${requestedFormat})` : ""}`);
+    console.log(
+      `[prepare] [${source}] ${logId} → ${summarizeUrlForLogs(url)}${requestedFormat ? ` (${requestedFormat})` : ""}`
+    );
 
     const platform = detectPlatform(url);
     if (!platform) {

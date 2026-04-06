@@ -11,44 +11,46 @@ const sections: Section[] = [
   {
     title: "the short version",
     content: [
-      "yoink doesn't have accounts, doesn't store your downloads, and only collects anonymous page view stats. we keep the bare minimum to keep the service running. that's it.",
+      "yoink doesn't have accounts and doesn't keep download history. we removed third-party analytics and keep data collection narrow: transient rate limiting, anonymized app logs for debugging, and any feedback you choose to submit.",
     ],
   },
   {
-    title: "no accounts, minimal analytics",
+    title: "no accounts, no analytics",
     content: [
-      "yoink has no user accounts, no sign-ups, and no cookies. we don't use google analytics, facebook pixel, or any invasive tracking service.",
-      "we use umami for basic, anonymous usage analytics — page views and visit counts. umami is privacy-focused, doesn't use cookies, doesn't collect personal data, and is fully GDPR compliant. we use it to understand which pages get traffic, not to track individual users.",
-      "we don't know who you are or what you download.",
+      "yoink has no user accounts, no sign-ups, and no analytics scripts. we don't use google analytics, facebook pixel, umami, or any ad-tech tracker.",
+      "the only browser-side storage used by the app is a local dismiss flag for the migration banner. it's kept in your browser and never sent to us.",
     ],
   },
   {
-    title: "what we don't store",
+    title: "downloads and processing",
     content: [
-      "audio files are fetched in real-time from third-party sources, processed in memory, and delivered directly to your browser. nothing is cached, stored, or retained on our servers after your request completes.",
-      "we don't keep download history, search queries, or any record of what tracks you've requested.",
+      "audio files are fetched in real time and delivered to your browser. for some server-side conversion paths, temporary files may be written to the server's temp directory during processing and then deleted immediately after the request completes.",
+      "we don't keep user accounts, download history, or a permanent library of what you've requested.",
     ],
   },
   {
-    title: "server logs",
+    title: "rate limiting and app logs",
     content: [
-      "our hosting provider (railway) may collect basic server logs — things like IP addresses, request timestamps, and HTTP status codes. these are standard infrastructure logs used for debugging and abuse prevention.",
-      "we don't actively analyze these logs to identify individual users. they're automatically rotated and deleted by the hosting provider.",
+      "yoink uses your IP address in volatile server memory to rate limit requests and prevent abuse. that in-memory data is not written to our application database and resets when the server restarts.",
+      "our application logs use an anonymized request identifier derived from your IP address instead of logging the raw IP directly. we keep request-level debugging details like the endpoint used, the source platform, and limited request metadata so we can diagnose failures such as tracks not being sourced correctly.",
+      "our hosting provider may still generate infrastructure logs that can include IP addresses, timestamps, and status codes at the platform level.",
     ],
   },
   {
-    title: "rate limiting",
+    title: "feedback submissions",
     content: [
-      "yoink uses in-memory rate limiting based on your IP address to prevent abuse. this data is stored only in server memory, is never written to disk, and is lost whenever the server restarts. we don't build profiles or track usage patterns.",
-      <>current limits: 30 downloads per minute, 5 playlist downloads per minute (max 200 tracks per playlist), 15 searches per minute, and 10 metadata lookups per minute. higher limits may be available in the future — check the <Link href="/roadmap" className="text-lavender/70 hover:text-lavender underline transition-colors">roadmap</Link>.</>,
+      "if you use the in-app feedback form, we collect the report fields you submit: type, title, description, and optionally your email address and screenshot.",
+      "feedback submissions are sent to our internal Linear workspace for triage. if you include a screenshot, it is uploaded to Linear's file storage. only the site owner has access to that workspace. don't include passwords, payment details, private messages, or other sensitive personal data in feedback or screenshots.",
+      "we use an optional email address only if we need to follow up about your report. optional contact details and screenshots are kept for up to 90 days after a ticket is resolved, unless we still need them for an active issue. non-sensitive issue text may be kept longer as part of the product backlog and support history.",
+      "if you want a feedback submission corrected or deleted, email me@yoinkify.com and we'll handle it manually.",
     ],
   },
   {
     title: "third-party services",
     content: [
       "to fetch metadata and audio, yoink communicates with several third-party APIs on your behalf. these services may have their own privacy policies:",
-      "spotify web API — for track metadata, album art, and search. apple's itunes search API — for genre data and catalog matching. lrclib — for lyrics. audio is sourced from publicly available third-party services.",
-      "yoink sends the minimum data required to these services (track names, artist names, URLs). we don't send any personal information about you.",
+      "music metadata providers — for track details, artwork, search, and catalog matching. lyric providers such as lrclib and musixmatch — for lyrics. linear — for feedback intake. audio is sourced from third-party music services. the specific metadata providers we use may change over time based on availability and reliability.",
+      "yoink sends the minimum request data needed for those services to respond, such as track names, artist names, URLs, and feedback content you explicitly submit. we do not sell personal information or use ad-tech profiling.",
     ],
   },
   {
@@ -124,10 +126,9 @@ export default function PrivacyPage() {
             <p className="text-sm font-bold text-green">tldr</p>
           </div>
           <p className="text-sm text-subtext0/80 leading-relaxed">
-            no accounts. no cookies. no download history. audio is
-            processed in memory and never saved. anonymous page view analytics
-            via umami (no personal data). IP used for rate limiting only, kept
-            in volatile memory.
+            no accounts. no analytics. no download history. rate limiting uses
+            IPs in volatile memory, app logs use anonymized request IDs, and
+            feedback is only collected when you choose to submit it.
           </p>
         </div>
       </section>
@@ -185,8 +186,8 @@ export default function PrivacyPage() {
         >
           <p className="text-sm font-bold text-text">questions about your data?</p>
           <p className="text-sm text-subtext0/80 leading-relaxed">
-            we probably don&apos;t have any data about you, but if you have
-            concerns, reach out.
+            if you want a feedback submission corrected or deleted, or if you
+            have questions about rate limiting or debugging logs, reach out.
           </p>
           <a
             href="mailto:me@yoinkify.com"
@@ -217,7 +218,7 @@ export default function PrivacyPage() {
             rel="noopener noreferrer"
             className="hover:text-text transition-colors duration-200"
           >
-            github
+            source
           </a>
         </div>
       </footer>

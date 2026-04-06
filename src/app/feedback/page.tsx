@@ -44,6 +44,22 @@ export default function FeedbackPage() {
 
       {/* Form */}
       <section className="px-6 py-16 max-w-2xl mx-auto">
+        <div
+          className="animate-fade-in-up border border-surface0/60 rounded-lg p-5 mb-5 bg-mantle/30 space-y-2"
+          style={{ opacity: 0 }}
+        >
+          <p className="text-xs uppercase tracking-wider font-bold text-text">
+            before you submit
+          </p>
+          <p className="text-sm text-subtext0/80 leading-relaxed">
+            feedback goes to our internal Linear backlog. if you add an email,
+            we may use it to follow up. if you upload a screenshot, it will be
+            stored with the ticket. only the site owner can access that
+            workspace. optional emails and screenshots are kept for up to 90
+            days after a ticket is resolved unless they&apos;re still needed for
+            an active issue. don&apos;t include sensitive personal data.
+          </p>
+        </div>
         <FeedbackForm />
       </section>
 
@@ -72,7 +88,7 @@ export default function FeedbackPage() {
             rel="noopener noreferrer"
             className="hover:text-text transition-colors duration-200"
           >
-            github
+            source
           </a>
         </div>
       </footer>

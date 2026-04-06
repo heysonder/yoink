@@ -264,6 +264,13 @@ export default function FeedbackForm() {
           className="w-full bg-surface0/50 border border-surface0 rounded-lg px-4 py-3 text-sm text-text placeholder:text-overlay0 input-glow focus:outline-none focus:border-lavender/50"
         />
         {errors.email && <p className="text-xs text-red">{errors.email}</p>}
+        {!errors.email && email && (
+          <p className="text-xs text-overlay0">
+            we&apos;ll only use this if we need to follow up about your report, and
+            we aim to remove optional contact details within 90 days after the
+            ticket is resolved.
+          </p>
+        )}
       </div>
 
       {/* Image upload */}
@@ -320,6 +327,13 @@ export default function FeedbackForm() {
           className="hidden"
         />
         {errors.image && <p className="text-xs text-red">{errors.image}</p>}
+        {!errors.image && (
+          <p className="text-xs text-overlay0">
+            screenshots are uploaded with your ticket and we aim to remove them
+            within 90 days after the ticket is resolved. crop out anything
+            private first.
+          </p>
+        )}
       </div>
 
       {/* Submit */}

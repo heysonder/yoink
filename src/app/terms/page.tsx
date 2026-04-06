@@ -11,7 +11,7 @@ const sections: Section[] = [
   {
     title: "what yoink is",
     content: [
-      "yoink is a free tool that lets you download music files from publicly available sources on the internet. we use spotify's public API for metadata (track info, album art, lyrics) and fetch audio from third-party services.",
+      "yoink is a free tool that lets you download music files from publicly available sources on the internet. we use third-party metadata providers for track info, album art, lyrics, and related catalog data, and fetch audio from third-party services.",
       "we are not affiliated with, endorsed by, or connected to spotify, apple, youtube, deezer, tidal, or any other streaming platform. all trademarks belong to their respective owners.",
     ],
   },
@@ -37,10 +37,18 @@ const sections: Section[] = [
     ],
   },
   {
+    title: "feedback and support",
+    content: [
+      "if you use the in-app feedback form, the details you submit are sent to our internal issue tracker so we can review bugs and feature requests. only the site owner has access to that workspace. optional contact emails are used only for follow-up.",
+      "if you upload a screenshot, it will be attached to the ticket. optional contact details and screenshots are generally removed within 90 days after a ticket is resolved unless still needed for an active issue. don't submit sensitive personal information through the feedback form.",
+    ],
+  },
+  {
     title: "DMCA & takedowns",
     content: [
       "yoink does not host, store, or cache any copyrighted audio files on its servers. all audio is fetched from third-party sources in real-time and delivered directly to you. nothing is retained after your request completes.",
       "if you believe your copyrighted work is being accessed through yoink in a way that constitutes infringement, contact us at dmca@yoinkify.com with details and we will promptly address valid concerns.",
+      "we reserve the right to suspend, block, or permanently restrict access to yoink for users who are the subject of repeated or credible copyright infringement complaints, or who repeatedly use the service in a way that appears to violate applicable copyright law or the rights of others. we may also disable access to specific links, sources, or functionality when we believe doing so is necessary to prevent infringement.",
     ],
   },
   {
@@ -193,7 +201,7 @@ export default function TermsPage() {
             rel="noopener noreferrer"
             className="hover:text-text transition-colors duration-200"
           >
-            github
+            source
           </a>
         </div>
       </footer>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { LinearClient } from "@linear/sdk";
 import { rateLimit } from "@/lib/ratelimit";
+import { getClientIp, getRequestLogId, summarizeTextForLogs } from "@/lib/request-privacy";
 
 const TEAM_KEY = "YK";
 const PROJECT_NAME = "External Feedback Intake + Linear Triage";
@@ -16,7 +17,8 @@ function getLinearClient(): LinearClient {
 export async function POST(request: NextRequest) {
   try {
     // Rate limit
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getClientIp(request);
+    const logId = getRequestLogId(request);
     const { allowed, retryAfter } = rateLimit(`feedback:${ip}`, 5, 60_000);
     if (!allowed) {
       return NextResponse.json(
@@ -99,7 +101,6 @@ export async function POST(request: NextRequest) {
             method: "PUT",
             headers: {
               "Content-Type": image.type,
-              "Cache-Control": "public, max-age=31536000",
             },
             body: buffer,
           });
@@ -140,7 +141,9 @@ export async function POST(request: NextRequest) {
     });
 
     const issue = await issuePayload.issue;
-    console.log(`[feedback] [${type}] ${ip} → created ${issue?.identifier || "issue"}: "${title.trim()}"`);
+    console.log(
+      `[feedback] [${type}] ${logId} → created ${issue?.identifier || "issue"} (${summarizeTextForLogs(title.trim(), 40)})`
+    );
 
     return NextResponse.json({
       success: true,

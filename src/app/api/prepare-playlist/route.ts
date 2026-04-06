@@ -7,6 +7,7 @@ import { rateLimit } from "@/lib/ratelimit";
 import { resolvePlaylist, resolveAlbum, resolveSpotifyTrack, searchDeezerStructured } from "@/lib/resolve-track";
 import { getRequestSource } from "@/lib/request-source";
 import { buildEnvelopeMetadata, packEnvelope } from "@/lib/envelope";
+import { getClientIp, getRequestLogId, summarizeUrlForLogs } from "@/lib/request-privacy";
 
 export const maxDuration = 300;
 
@@ -69,7 +70,8 @@ async function prepareTrack(
 
 export async function POST(request: NextRequest) {
   try {
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getClientIp(request);
+    const logId = getRequestLogId(request);
     const source = getRequestSource(request);
     const { allowed, retryAfter } = rateLimit(`prepare-playlist:${ip}`, 5, 60_000);
     if (!allowed) {
@@ -82,7 +84,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { url, format: requestedFormat, genreSource, syncedLyrics } = body;
 
-    console.log(`[prepare-playlist] [${source}] ${ip} → ${url}`);
+    console.log(`[prepare-playlist] [${source}] ${logId} → ${summarizeUrlForLogs(url)}`);
 
     if (!url || typeof url !== "string") {
       return NextResponse.json({ error: "URL is required" }, { status: 400 });

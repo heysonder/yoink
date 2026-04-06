@@ -1,27 +1,24 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "yoink — spotify downloader",
+    default: "yoink | download from spotify links",
     template: "%s — yoink",
   },
   description:
-    "download spotify tracks and playlists in lossless flac, alac, or 320kbps mp3 with full metadata, album art, and lyrics. no account required.",
+    "download tracks and playlists from spotify links in lossless flac, alac, or 320kbps mp3 with metadata, album art, and lyrics. no account required.",
   keywords: [
-    "spotify downloader",
+    "download from spotify links",
     "spotify to mp3",
     "spotify to flac",
     "spotify lossless download",
-    "spotify flac downloader",
-    "spotify alac downloader",
     "download spotify songs",
     "spotify playlist downloader",
     "spotify mp3 converter",
-    "free spotify downloader",
-    "spotify music downloader",
-    "lossless spotify",
+    "music link downloader",
+    "tagged music downloads",
+    "lossless music downloader",
     "spotify hifi download",
     "yoink",
   ],
@@ -30,9 +27,9 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   openGraph: {
-    title: "yoink — spotify downloader",
+    title: "yoink | download from spotify links",
     description:
-      "download spotify tracks and playlists in lossless flac, alac, or 320kbps mp3. metadata and album art included. no account required.",
+      "download tracks and playlists from spotify links in lossless flac, alac, or 320kbps mp3. metadata and album art included. no account required.",
     siteName: "yoink",
     type: "website",
     locale: "en_US",
@@ -42,15 +39,15 @@ export const metadata: Metadata = {
         url: "/og.png",
         width: 1200,
         height: 630,
-        alt: "yoink — spotify downloader",
+        alt: "yoink | download from spotify links",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "yoink — spotify downloader",
+    title: "yoink | download from spotify links",
     description:
-      "download spotify tracks and playlists in lossless flac, alac, or 320kbps mp3. metadata and album art included.",
+      "download tracks and playlists from spotify links in lossless flac, alac, or 320kbps mp3. metadata and album art included.",
     images: ["/og.png"],
   },
   robots: {
@@ -66,7 +63,7 @@ const jsonLd = JSON.stringify({
   name: "yoink",
   url: "https://yoinkify.com",
   description:
-    "Download Spotify tracks and playlists in lossless FLAC, ALAC, or 320kbps MP3 with full metadata, album art, and lyrics.",
+    "Download tracks and playlists from Spotify links in lossless FLAC, ALAC, or 320kbps MP3 with full metadata, album art, and lyrics.",
   applicationCategory: "MultimediaApplication",
   operatingSystem: "Any",
   offers: {
@@ -75,8 +72,8 @@ const jsonLd = JSON.stringify({
     priceCurrency: "USD",
   },
   featureList: [
-    "Spotify track download",
-    "Spotify playlist download",
+    "Track download from Spotify links",
+    "Playlist download from Spotify links",
     "Lossless FLAC download",
     "Lossless ALAC download",
     "320kbps MP3 conversion",
@@ -101,11 +98,6 @@ export default function RootLayout({
       </head>
       <body className="antialiased min-h-screen">
         {children}
-        <Script
-          defer
-          src="https://umami.yoinkify.com/script.js"
-          data-website-id="eea5d900-bc1a-456f-a5c7-463d9afccb09"
-        />
       </body>
     </html>
   );

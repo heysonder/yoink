@@ -22,6 +22,7 @@ import { rateLimit } from "@/lib/ratelimit";
 import { incrementDownloads } from "@/lib/counter";
 import { resolveTrack } from "@/lib/resolve-track";
 import { getRequestSource } from "@/lib/request-source";
+import { getClientIp, getRequestLogId, summarizeUrlForLogs } from "@/lib/request-privacy";
 
 const execFileAsync = promisify(execFile);
 
@@ -51,7 +52,8 @@ export async function POST(request: NextRequest) {
   let tempDir: string | null = null;
 
   try {
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getClientIp(request);
+    const logId = getRequestLogId(request);
     const source = getRequestSource(request);
     const { allowed, retryAfter } = rateLimit(`dl:${ip}`, 30, 60_000);
     if (!allowed) {
@@ -72,7 +74,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "URL is required" }, { status: 400 });
     }
 
-    console.log(`[download] [${source}] ${ip} → ${url}${requestedFormat ? ` (${requestedFormat})` : ""}`);
+    console.log(
+      `[download] [${source}] ${logId} → ${summarizeUrlForLogs(url)}${requestedFormat ? ` (${requestedFormat})` : ""}`
+    );
 
     const platform = detectPlatform(url);
     if (!platform) {

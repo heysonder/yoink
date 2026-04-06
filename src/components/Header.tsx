@@ -12,7 +12,7 @@ export default function Header() {
         </span>
       </Link>
       <div className="flex items-center gap-4">
-        <span className="text-xs text-overlay0 hidden sm:block">spotify downloader</span>
+        <span className="text-xs text-overlay0 hidden sm:block">music downloader</span>
         <Link href="/feedback" className="text-xs text-surface2 hover:text-lavender transition-colors duration-200">feedback</Link>
         <a
           href="https://yoinkify.com/tip"
