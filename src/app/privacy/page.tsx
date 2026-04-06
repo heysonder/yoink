@@ -15,9 +15,10 @@ const sections: Section[] = [
     ],
   },
   {
-    title: "no accounts, no analytics",
+    title: "no accounts, no analytics, no cookies",
     content: [
       "yoink has no user accounts, no sign-ups, and no analytics scripts. we don't use google analytics, facebook pixel, umami, or any ad-tech tracker.",
+      "yoink does not set any cookies. we don't use cookies for tracking, authentication, or any other purpose.",
       "the only browser-side storage used by the app is a local dismiss flag for the migration banner. it's kept in your browser and never sent to us.",
     ],
   },
@@ -32,7 +33,7 @@ const sections: Section[] = [
     title: "rate limiting and app logs",
     content: [
       "yoink uses your IP address in volatile server memory to rate limit requests and prevent abuse. that in-memory data is not written to our application database and resets when the server restarts.",
-      "our application logs use an anonymized request identifier derived from your IP address instead of logging the raw IP directly. we keep request-level debugging details like the endpoint used, the source platform, and limited request metadata so we can diagnose failures such as tracks not being sourced correctly.",
+      "our application logs use a random request ID (e.g. req-7f3a2b1c) that is generated fresh for each request and is not tied to your IP address or identity. there is no way to link two requests to the same person from the logs alone. we keep request-level debugging details like the endpoint used, the source platform, and limited request metadata so we can diagnose failures such as tracks not being sourced correctly.",
       "our hosting provider may still generate infrastructure logs that can include IP addresses, timestamps, and status codes at the platform level.",
     ],
   },
@@ -57,6 +58,14 @@ const sections: Section[] = [
     title: "self-hosted instances",
     content: [
       "if you self-host yoink using our docker image, your instance is entirely under your control. we have no visibility into self-hosted deployments and collect no data from them.",
+    ],
+  },
+  {
+    title: "your rights (GDPR & international users)",
+    content: [
+      "if you're in the EU, EEA, or UK, you have the right to access, correct, delete, or port any personal data we hold about you. you can also object to or restrict processing. our legal basis for the limited processing we do (rate limiting, debugging logs) is legitimate interest in keeping the service running and preventing abuse.",
+      "in practice, we hold almost no personal data — there are no accounts, no download history, and logs use pseudonymized identifiers. if you've submitted feedback with an email address or screenshot and want it deleted, email me@yoinkify.com and we'll handle it.",
+      "if you're in california, you have similar rights under the CCPA/CPRA. we don't sell personal information and have nothing to opt you out of.",
     ],
   },
   {
@@ -107,6 +116,9 @@ export default function PrivacyPage() {
             we don&apos;t track you. we don&apos;t store your data. here&apos;s
             the full breakdown.
           </p>
+          <p className="text-xs text-overlay0/50">
+            last updated: april 6, 2026
+          </p>
         </div>
       </section>
 
@@ -126,9 +138,10 @@ export default function PrivacyPage() {
             <p className="text-sm font-bold text-green">tldr</p>
           </div>
           <p className="text-sm text-subtext0/80 leading-relaxed">
-            no accounts. no analytics. no download history. rate limiting uses
-            IPs in volatile memory, app logs use anonymized request IDs, and
-            feedback is only collected when you choose to submit it.
+            no accounts. no analytics. no cookies. no download history. rate
+            limiting uses IPs in volatile memory, app logs use random
+            request IDs that can&apos;t be linked back to you, and feedback
+            is only collected when you choose to submit it.
           </p>
         </div>
       </section>
@@ -205,20 +218,12 @@ export default function PrivacyPage() {
           <Link href="/terms" className="hover:text-text transition-colors duration-200">terms</Link>
           <Link href="/roadmap" className="hover:text-text transition-colors duration-200">roadmap</Link>
           <a
-            href="https://yoinkify.com/tip"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-peach transition-colors duration-200"
-          >
-            tip jar
-          </a>
-          <a
             href="https://github.com/heysonder/yoink"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-text transition-colors duration-200"
           >
-            source
+            star on github
           </a>
         </div>
       </footer>

@@ -15,10 +15,11 @@ function getLinearClient(): LinearClient {
 }
 
 export async function POST(request: NextRequest) {
+  const logId = getRequestLogId(request);
+
   try {
     // Rate limit
     const ip = getClientIp(request);
-    const logId = getRequestLogId(request);
     const { allowed, retryAfter } = rateLimit(`feedback:${ip}`, 5, 60_000);
     if (!allowed) {
       return NextResponse.json(
@@ -151,6 +152,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("[feedback] error:", error instanceof Error ? error.message : error);
-    return NextResponse.json({ error: "something went wrong" }, { status: 500 });
+    return NextResponse.json({ error: "something went wrong", requestId: logId }, { status: 500 });
   }
 }

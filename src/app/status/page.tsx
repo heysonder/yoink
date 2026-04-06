@@ -194,10 +194,12 @@ export default function StatusPage() {
         <div className="flex items-center gap-3 sm:gap-4">
           <Link href="/roadmap" className="hover:text-text transition-colors duration-200">roadmap</Link>
           <a
-            href="/tip"
-            className="hover:text-peach transition-colors duration-200"
+            href="https://github.com/heysonder/yoink"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-text transition-colors duration-200"
           >
-            tip jar
+            star on github
           </a>
         </div>
       </footer>

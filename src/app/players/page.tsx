@@ -376,20 +376,12 @@ export default function PlayersPage() {
         <span>yoink</span>
         <div className="flex items-center gap-4">
           <a
-            href="https://yoinkify.com/tip"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-peach transition-colors duration-200"
-          >
-            tip jar
-          </a>
-          <a
             href="https://github.com/heysonder/yoink"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-text transition-colors duration-200"
           >
-            source
+            star on github
           </a>
         </div>
       </footer>

@@ -17,9 +17,10 @@ async function enrichWithVideoCover(track: TrackInfo): Promise<TrackInfo> {
 }
 
 export async function POST(request: NextRequest) {
+  const logId = getRequestLogId(request);
+
   try {
     const ip = getClientIp(request);
-    const logId = getRequestLogId(request);
     const { allowed, retryAfter } = rateLimit(`meta:${ip}`, 10, 60_000);
     if (!allowed) {
       console.log("[ratelimit] metadata blocked:", logId);
@@ -127,6 +128,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to fetch info";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message, requestId: logId }, { status: 500 });
   }
 }

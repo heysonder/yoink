@@ -44,6 +44,7 @@ export default function Home() {
   const [trackStatuses, setTrackStatuses] = useState<TrackStatus[]>([]);
   const [trackErrors, setTrackErrors] = useState<Record<number, string>>({});
   const [error, setError] = useState("");
+  const [errorRequestId, setErrorRequestId] = useState<string | null>(null);
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [quality, setQuality] = useState<QualityInfo | null>(null);
   const [format, setFormat] = useState<Format>("mp3");
@@ -72,6 +73,7 @@ export default function Home() {
   const handleSubmit = async (url: string) => {
     setState("fetching");
     setError("");
+    setErrorRequestId(null);
     setIsRateLimited(false);
     setTrack(null);
     setPlaylist(null);
@@ -91,6 +93,7 @@ export default function Home() {
       if (!res.ok) {
         const data = await res.json();
         if (data.rateLimit) setIsRateLimited(true);
+        if (data.requestId) setErrorRequestId(data.requestId);
         throw new Error(data.error || "Failed to fetch info");
       }
 
@@ -125,6 +128,7 @@ export default function Home() {
         if (!res.ok) {
           const data = await res.json();
           if (data.rateLimit) setIsRateLimited(true);
+          if (data.requestId) setErrorRequestId(data.requestId);
           throw new Error(data.error || "Download failed");
         }
 
@@ -185,6 +189,7 @@ export default function Home() {
       if (!res.ok) {
         const data = await res.json();
         if (data.rateLimit) setIsRateLimited(true);
+        if (data.requestId) setErrorRequestId(data.requestId);
         throw new Error(data.error || "Download failed");
       }
 
@@ -531,6 +536,7 @@ export default function Home() {
     setTrackStatuses([]);
     setTrackErrors({});
     setError("");
+    setErrorRequestId(null);
     setQuality(null);
     abortRef.current = true;
   };
@@ -638,6 +644,11 @@ export default function Home() {
                       </Link>
                     </p>
                   )}
+                  {errorRequestId && (
+                    <p className="mt-2 text-xs text-overlay0/40 font-mono">
+                      ref: {errorRequestId}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex items-center justify-between">
@@ -651,7 +662,7 @@ export default function Home() {
                   href="mailto:me@yoinkify.com"
                   className="text-xs text-overlay0/50 hover:text-overlay0 transition-colors"
                 >
-                  me@yoinkify.com
+                  report bug
                 </a>
               </div>
             </div>
@@ -905,14 +916,6 @@ export default function Home() {
           <Link href="/how" className="text-mauve/60 hover:text-mauve transition-colors duration-200 hidden sm:block">local files setup</Link>
           <Link href="/how" className="text-mauve/60 hover:text-mauve transition-colors duration-200 sm:hidden">local files</Link>
           <Link href="/roadmap" className="hover:text-text transition-colors duration-200">roadmap</Link>
-          <a
-            href="https://yoinkify.com/tip"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-peach transition-colors duration-200"
-          >
-            tip jar
-          </a>
           <a
             href="https://github.com/heysonder/yoink"
             target="_blank"

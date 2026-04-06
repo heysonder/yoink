@@ -50,10 +50,10 @@ const ALLOWED_ART_HOSTS = [
 
 export async function POST(request: NextRequest) {
   let tempDir: string | null = null;
+  const logId = getRequestLogId(request);
 
   try {
     const ip = getClientIp(request);
-    const logId = getRequestLogId(request);
     const source = getRequestSource(request);
     const { allowed, retryAfter } = rateLimit(`dl:${ip}`, 30, 60_000);
     if (!allowed) {
@@ -338,7 +338,7 @@ export async function POST(request: NextRequest) {
     return new NextResponse(new Uint8Array(finalBuffer), { headers: responseHeaders });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Download failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message, requestId: logId }, { status: 500 });
   } finally {
     if (tempDir) {
       try {

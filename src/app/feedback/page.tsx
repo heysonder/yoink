@@ -75,14 +75,6 @@ export default function FeedbackPage() {
           <Link href="/how" className="text-mauve/60 hover:text-mauve transition-colors duration-200">local files</Link>
           <Link href="/players" className="text-green/60 hover:text-green transition-colors duration-200">players</Link>
           <a
-            href="https://yoinkify.com/tip"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-peach transition-colors duration-200"
-          >
-            tip jar
-          </a>
-          <a
             href="https://github.com/heysonder/yoink"
             target="_blank"
             rel="noopener noreferrer"

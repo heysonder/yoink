@@ -4,6 +4,8 @@ paste a music link. get the file.
 
 **[yoinkify.com](https://yoinkify.com)**
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/O5O31P50IY)
+
 <p align="center">
   <img src="docs/demo.gif" alt="yoink demo" width="720" />
 </p>
@@ -121,10 +123,6 @@ self-hosted instances have no rate limits by default — adjust in `src/lib/rate
 ## attribution
 
 if you fork or self-host yoink, a "powered by [yoink](https://yoinkify.com)" mention is appreciated but not required.
-
-## support
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/O5O31P50IY)
 
 ## license
 

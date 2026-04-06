@@ -183,19 +183,19 @@ export default function LandingPage() {
             style={{ opacity: 0 }}
           >
             <p className="text-xs text-overlay0 uppercase tracking-[0.3em]">
-              keep yoink running
+              support yoink
             </p>
             <p className="text-sm text-overlay1 leading-relaxed max-w-md">
-              yoink is free and always will be. if it saves you time or you just
-              think it&apos;s cool, a small tip helps cover server costs.
+              yoink is free and open source. if it saves you time or you just
+              think it&apos;s cool, drop a star on github.
             </p>
             <a
-              href="https://yoinkify.com/tip"
+              href="https://github.com/heysonder/yoink"
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-press inline-block text-sm text-peach border border-peach/30 hover:bg-peach/10 px-6 py-3 rounded-lg font-bold uppercase tracking-wider transition-all duration-200"
+              className="btn-press inline-block text-sm text-text border border-surface0/40 hover:bg-surface0/20 px-6 py-3 rounded-lg font-bold uppercase tracking-wider transition-all duration-200"
             >
-              leave a tip
+              star on github
             </a>
           </div>
         </div>

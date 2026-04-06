@@ -11,15 +11,15 @@ const sections: Section[] = [
   {
     title: "what yoink is",
     content: [
-      "yoink is a free tool that lets you download music files from publicly available sources on the internet. we use third-party metadata providers for track info, album art, lyrics, and related catalog data, and fetch audio from third-party services.",
+      "yoink is a free utility that processes supported music links and prepares audio files with metadata, artwork, and optional lyrics for personal workflow use.",
       "we are not affiliated with, endorsed by, or connected to spotify, apple, youtube, deezer, tidal, or any other streaming platform. all trademarks belong to their respective owners.",
     ],
   },
   {
     title: "your responsibility",
     content: [
-      "you are solely responsible for how you use yoink. this tool is intended for personal, non-commercial use only — specifically for downloading music you already own or have the legal right to access.",
-      "you agree not to use yoink to infringe on the rights of artists, labels, or copyright holders. we don't monitor what you download, but you're expected to respect applicable copyright laws in your jurisdiction.",
+      "you are solely responsible for how you use yoink. you may use the service only where you have all rights, permissions, and authorizations required by applicable law and by the terms of any third-party service involved.",
+      "you agree not to use yoink to infringe copyright or other intellectual-property rights, violate platform terms, circumvent access restrictions, misuse third-party credentials, or otherwise interfere with the rights of artists, labels, rightsholders, or service providers.",
     ],
   },
   {
@@ -64,6 +64,25 @@ const sections: Section[] = [
     ],
   },
   {
+    title: "third-party services",
+    content: [
+      "yoink depends on third-party platforms, content sources, and metadata providers that are not controlled by us. availability may change at any time, and your use of those services remains subject to their separate terms and policies.",
+    ],
+  },
+  {
+    title: "limitation of liability",
+    content: [
+      "to the fullest extent permitted by law, yoink and its operator shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or data, arising out of or related to your use of the service.",
+      "in no event shall our total liability exceed the amount you have paid to use yoink (which is zero — it's free).",
+    ],
+  },
+  {
+    title: "indemnification",
+    content: [
+      "you agree to indemnify, defend, and hold harmless yoink and its operator from any claims, damages, losses, liabilities, costs, or expenses (including reasonable legal fees) arising from your use of the service, your violation of these terms, or your infringement of any third-party rights.",
+    ],
+  },
+  {
     title: "changes",
     content: [
       "we may update these terms at any time. continued use of yoink after changes means you accept the updated terms. we won't send you an email about it — check back here if you care.",
@@ -104,6 +123,9 @@ export default function TermsPage() {
           <p className="text-lg text-subtext0/80 leading-relaxed max-w-md">
             the boring but necessary stuff. read it or don&apos;t — using
             yoink means you agree.
+          </p>
+          <p className="text-xs text-overlay0/50">
+            last updated: april 6, 2026
           </p>
         </div>
       </section>
@@ -188,20 +210,12 @@ export default function TermsPage() {
           <Link href="/privacy" className="hover:text-text transition-colors duration-200">privacy</Link>
           <Link href="/roadmap" className="hover:text-text transition-colors duration-200">roadmap</Link>
           <a
-            href="https://yoinkify.com/tip"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-peach transition-colors duration-200"
-          >
-            tip jar
-          </a>
-          <a
             href="https://github.com/heysonder/yoink"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-text transition-colors duration-200"
           >
-            source
+            star on github
           </a>
         </div>
       </footer>

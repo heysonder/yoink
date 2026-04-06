@@ -1,6 +1,14 @@
 import { createHash } from "crypto";
 import type { TrackInfo } from "./spotify";
 
+// ─── Self-hosting only ───────────────────────────────────────────────
+// The Deezer audio pipeline below (Blowfish decryption, ARL session,
+// encrypted stream fetching) is NOT used by the hosted yoinkify.com
+// instance. It exists solely for self-hosted deployments where the
+// operator provides their own DEEZER_ARL and DEEZER_MASTER_KEY.
+// The hosted service uses Tidal and YouTube as audio sources.
+// ─────────────────────────────────────────────────────────────────────
+
 const DEEZER_MASTER_KEY = process.env.DEEZER_MASTER_KEY!;
 
 // Blowfish implementation (OpenSSL 3.x dropped legacy cipher support)

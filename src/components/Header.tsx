@@ -15,12 +15,12 @@ export default function Header() {
         <span className="text-xs text-overlay0 hidden sm:block">music downloader</span>
         <Link href="/feedback" className="text-xs text-surface2 hover:text-lavender transition-colors duration-200">feedback</Link>
         <a
-          href="https://yoinkify.com/tip"
+          href="https://github.com/heysonder/yoink"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs text-peach/80 hover:text-peach border border-peach/20 hover:border-peach/40 px-2.5 py-1 rounded-md transition-all duration-200"
+          className="text-xs text-overlay1/80 hover:text-text border border-surface0/40 hover:border-surface0/60 px-2.5 py-1 rounded-md transition-all duration-200"
         >
-          tip jar
+          star on github
         </a>
         <Link href="/roadmap" className="text-xs text-surface2 hover:text-lavender transition-colors duration-200">v3.0</Link>
       </div>

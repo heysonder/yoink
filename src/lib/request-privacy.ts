@@ -1,4 +1,4 @@
-import { createHash } from "crypto";
+import { randomBytes } from "crypto";
 import type { NextRequest } from "next/server";
 
 export function getClientIp(request: NextRequest): string {
@@ -7,18 +7,9 @@ export function getClientIp(request: NextRequest): string {
     || "unknown";
 }
 
-export function anonymizeIp(ip: string): string {
-  if (!ip || ip === "unknown") return "anon-unknown";
-
-  const salt = process.env.LOG_ANONYMIZATION_SALT || "yoink-request-logs";
-  return `anon-${createHash("sha256")
-    .update(`${salt}:${ip}`)
-    .digest("hex")
-    .slice(0, 12)}`;
-}
-
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function getRequestLogId(request: NextRequest): string {
-  return anonymizeIp(getClientIp(request));
+  return `req-${randomBytes(4).toString("hex")}`;
 }
 
 export function summarizeUrlForLogs(value: string): string {

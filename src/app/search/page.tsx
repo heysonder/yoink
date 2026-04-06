@@ -396,12 +396,12 @@ export default function SearchPage() {
         <span>yoink</span>
         <div className="flex items-center gap-4">
           <a
-            href="https://yoinkify.com/tip"
+            href="https://github.com/heysonder/yoink"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-peach transition-colors duration-200"
+            className="hover:text-text transition-colors duration-200"
           >
-            tip jar
+            star on github
           </a>
           <span>search + download</span>
         </div>

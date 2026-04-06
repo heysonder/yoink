@@ -26,9 +26,10 @@ async function searchDeezer(query: string, limit = 8): Promise<TrackInfo[]> {
 }
 
 export async function GET(request: NextRequest) {
+  const logId = getRequestLogId(request);
+
   try {
     const ip = getClientIp(request);
-    const logId = getRequestLogId(request);
     const source = getRequestSource(request);
     const { allowed, retryAfter } = rateLimit(`search:${ip}`, 15, 60_000);
     if (!allowed) {
@@ -70,6 +71,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "no results found" }, { status: 404 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Search failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message, requestId: logId }, { status: 500 });
   }
 }

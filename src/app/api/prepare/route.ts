@@ -32,9 +32,10 @@ function isAllowedUrl(url: string, allowedHosts: string[]): boolean {
 export const maxDuration = 120;
 
 export async function POST(request: NextRequest) {
+  const logId = getRequestLogId(request);
+
   try {
     const ip = getClientIp(request);
-    const logId = getRequestLogId(request);
     const source = getRequestSource(request);
     const { allowed, retryAfter } = rateLimit(`dl:${ip}`, 30, 60_000);
     if (!allowed) {
@@ -123,6 +124,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Prepare failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message, requestId: logId }, { status: 500 });
   }
 }
