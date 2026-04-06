@@ -9,7 +9,7 @@ paste a music link. get the file.
 feedback is greatly appreciated — i thoroughly read every request. **[leave feedback](https://yoinkify.com/r/f)**
 
 <p align="center">
-  <video src="https://github.com/heysonder/yoink/raw/main/docs/demo.mp4" width="720" autoplay loop muted playsinline></video>
+  <img src="docs/demo.gif" alt="yoink demo" width="720" />
 </p>
 
 ## features
