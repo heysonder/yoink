@@ -24,7 +24,7 @@ jobs:
             cd /root/services/yoink &&
             git pull origin main &&
             docker compose build &&
-            docker compose up -d
+            docker compose up -d --force-recreate
           '
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
