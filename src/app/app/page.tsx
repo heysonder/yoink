@@ -9,6 +9,7 @@ import MigrationBanner from "@/components/MigrationBanner";
 import { unpackEnvelope } from "@/lib/client/envelope";
 import { encodeInBrowser, canUseClientFFmpeg, type FFmpegStatus } from "@/lib/client/ffmpeg-bridge";
 import { zipSync } from "fflate";
+import Spinner from "@/components/Spinner";
 
 interface TrackInfo {
   name: string;
@@ -616,11 +617,7 @@ export default function Home() {
           {/* Loading */}
           {state === "fetching" && (
             <div className="animate-fade-in-up border border-surface0/60 rounded-lg p-6 flex items-center gap-4 bg-mantle/30" style={{ opacity: 0 }}>
-              <div className="flex items-center gap-1.5">
-                <div className="loading-dot w-1.5 h-1.5 rounded-full bg-lavender" />
-                <div className="loading-dot w-1.5 h-1.5 rounded-full bg-lavender" />
-                <div className="loading-dot w-1.5 h-1.5 rounded-full bg-lavender" />
-              </div>
+              <Spinner className="w-4 h-4 text-lavender" />
               <span className="text-sm text-subtext0">fetching info</span>
             </div>
           )}
@@ -741,14 +738,7 @@ export default function Home() {
                   }`}
                 >
                   {state === "downloading" && (
-                    <span className="inline-flex items-center gap-2">
-                      <span className="flex gap-1">
-                        <span className="loading-dot w-1 h-1 rounded-full bg-lavender/70" />
-                        <span className="loading-dot w-1 h-1 rounded-full bg-lavender/70" />
-                        <span className="loading-dot w-1 h-1 rounded-full bg-lavender/70" />
-                      </span>
-                      {downloadPhase || "downloading"}
-                    </span>
+                    <span className="animate-text-shimmer">{downloadPhase || "downloading"}</span>
                   )}
                   {state === "done" && "downloaded"}
                   {state === "ready" && `download ${format}`}
@@ -817,7 +807,7 @@ export default function Home() {
                   <div
                     key={i}
                     className={`flex items-center gap-3 px-4 sm:px-6 py-3 border-b border-surface0/20 last:border-b-0 transition-colors duration-200 ${
-                      trackStatuses[i] === "downloading" ? "bg-lavender/5" : ""
+                      ""
                     }`}
                   >
                     {/* Status indicator */}
@@ -826,10 +816,7 @@ export default function Home() {
                         <span className="text-xs text-overlay0/50">{i + 1}</span>
                       )}
                       {trackStatuses[i] === "downloading" && (
-                        <div className="flex items-center justify-center gap-0.5">
-                          <div className="loading-dot w-1 h-1 rounded-full bg-lavender" />
-                          <div className="loading-dot w-1 h-1 rounded-full bg-lavender" />
-                        </div>
+                        <span className="text-xs text-lavender">{i + 1}</span>
                       )}
                       {trackStatuses[i] === "done" && (
                         <span className="text-xs text-green">✓</span>
@@ -842,7 +829,7 @@ export default function Home() {
                     {/* Track info */}
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm truncate ${
-                        trackStatuses[i] === "done" ? "text-subtext0" : "text-text"
+                        trackStatuses[i] === "downloading" ? "animate-text-shimmer text-lavender" : trackStatuses[i] === "done" ? "text-subtext0" : "text-text"
                       }`}>
                         {t.name}
                         {t.explicit && (
@@ -872,19 +859,9 @@ export default function Home() {
                   }`}
                 >
                   {state === "downloading" && (
-                    <span className="inline-flex items-center gap-2">
-                      <span className="flex gap-1">
-                        <span className="loading-dot w-1 h-1 rounded-full bg-lavender/70" />
-                        <span className="loading-dot w-1 h-1 rounded-full bg-lavender/70" />
-                        <span className="loading-dot w-1 h-1 rounded-full bg-lavender/70" />
-                      </span>
-                      {doneCount}/{totalCount}
-                    </span>
+                    <span className="animate-text-shimmer">downloading</span>
                   )}
-                  {state === "done" && (errorCount > 0
-                    ? `${doneCount}/${totalCount} downloaded · ${errorCount} failed`
-                    : `downloaded ${doneCount}/${totalCount}`
-                  )}
+                  {state === "done" && "downloaded"}
                   {state === "ready" && "download all"}
                 </button>
                 <button

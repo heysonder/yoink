@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import Header from "@/components/Header";
 import FormatToggle, { type Format } from "@/components/FormatToggle";
+import Spinner from "@/components/Spinner";
 
 interface TrackInfo {
   name: string;
@@ -183,11 +184,7 @@ export default function SearchPage() {
           {/* Searching */}
           {state === "searching" && (
             <div className="animate-fade-in-up border border-surface0/60 rounded-lg p-6 flex items-center gap-4 bg-mantle/30" style={{ opacity: 0 }}>
-              <div className="flex items-center gap-1.5">
-                <div className="loading-dot w-1.5 h-1.5 rounded-full bg-lavender" />
-                <div className="loading-dot w-1.5 h-1.5 rounded-full bg-lavender" />
-                <div className="loading-dot w-1.5 h-1.5 rounded-full bg-lavender" />
-              </div>
+              <Spinner className="w-4 h-4 text-lavender" />
               <span className="text-sm text-subtext0">searching</span>
             </div>
           )}
@@ -329,11 +326,7 @@ export default function SearchPage() {
                 >
                   {state === "downloading" && (
                     <span className="inline-flex items-center gap-2">
-                      <span className="flex gap-1">
-                        <span className="loading-dot w-1 h-1 rounded-full bg-lavender/70" />
-                        <span className="loading-dot w-1 h-1 rounded-full bg-lavender/70" />
-                        <span className="loading-dot w-1 h-1 rounded-full bg-lavender/70" />
-                      </span>
+                      <Spinner className="w-3 h-3 text-lavender/70" />
                       downloading
                     </span>
                   )}

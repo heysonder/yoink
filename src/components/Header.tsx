@@ -5,24 +5,25 @@ import Link from "next/link";
 export default function Header() {
   return (
     <header className="border-b border-surface0/60 px-6 py-4 flex items-center justify-between backdrop-blur-sm bg-base/80 sticky top-0 z-10">
-      <Link href="/" className="flex items-center gap-3 group">
-        <div className="status-dot w-2 h-2 rounded-full bg-green" />
-        <span className="text-sm font-bold tracking-wider uppercase text-text group-hover:text-lavender transition-colors">
-          yoink
-        </span>
+      <Link
+        href="/"
+        className="text-sm font-bold tracking-wider uppercase text-text hover:text-lavender transition-colors duration-200 animate-text-glow"
+      >
+        yoink
       </Link>
-      <div className="flex items-center gap-4">
-        <span className="text-xs text-overlay0 hidden sm:block">music downloader</span>
-        <Link href="/feedback" className="text-xs text-surface2 hover:text-lavender transition-colors duration-200">feedback</Link>
+      <div className="flex items-center gap-2 text-xs">
+        <Link href="/feedback" className="text-surface2 hover:text-lavender transition-colors duration-200">feedback</Link>
+        <span className="text-surface0/60">/</span>
         <a
           href="https://github.com/heysonder/yoink"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs text-overlay1/80 hover:text-text border border-surface0/40 hover:border-surface0/60 px-2.5 py-1 rounded-md transition-all duration-200"
+          className="text-surface2 hover:text-lavender transition-colors duration-200"
         >
           star on github
         </a>
-        <Link href="/roadmap" className="text-xs text-surface2 hover:text-lavender transition-colors duration-200">v3.0</Link>
+        <span className="text-surface0/60">|</span>
+        <Link href="/roadmap" className="text-surface2 hover:text-lavender transition-colors duration-200">v3.0</Link>
       </div>
     </header>
   );

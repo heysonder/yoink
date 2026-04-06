@@ -32,12 +32,9 @@ export default function LandingPage() {
       <MigrationBanner />
       {/* Nav */}
       <nav className="border-b border-surface0/60 px-6 py-4 flex items-center justify-between backdrop-blur-sm bg-base/80 sticky top-0 z-10">
-        <div className="flex items-center gap-3">
-          <div className="status-dot w-2 h-2 rounded-full bg-green" />
-          <span className="text-sm font-bold tracking-wider uppercase text-text">
-            yoink
-          </span>
-        </div>
+        <span className="text-sm font-bold tracking-wider uppercase text-text">
+          yoink
+        </span>
         <Link
           href="/app"
           className="btn-press text-xs text-crust bg-lavender hover:bg-mauve px-4 py-2 rounded-md font-bold uppercase tracking-wider transition-colors duration-200"
@@ -175,29 +172,33 @@ export default function LandingPage() {
         <div className="border-t border-surface0/40" />
       </div>
 
-      {/* Support + CTA */}
-      <section className="px-6 py-16 sm:py-24 max-w-2xl mx-auto">
-        <div className="space-y-12">
-          <div
-            className="animate-fade-in-up space-y-6"
-            style={{ opacity: 0 }}
+      {/* Support */}
+      <section className="px-6 py-20 sm:py-28 max-w-2xl mx-auto">
+        <div
+          className="animate-fade-in-up text-center space-y-6"
+          style={{ opacity: 0 }}
+        >
+          <p className="text-xs text-lavender uppercase tracking-[0.3em] font-bold">
+            open source
+          </p>
+          <h2 className="text-3xl sm:text-5xl font-bold leading-[0.95] tracking-tight text-text">
+            built in the open.
+            <br />
+            <span className="text-subtext0/60">free forever.</span>
+          </h2>
+          <p className="text-sm sm:text-base text-overlay1 leading-relaxed max-w-md mx-auto">
+            yoink is fully open source and always will be.
+            if it saves you time or you just think it&apos;s cool,
+            drop a star on github — it helps more than you&apos;d think.
+          </p>
+          <a
+            href="https://github.com/heysonder/yoink"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-press inline-block text-sm text-crust bg-lavender hover:bg-mauve px-8 py-3.5 rounded-lg font-bold uppercase tracking-wider transition-colors duration-200"
           >
-            <p className="text-xs text-overlay0 uppercase tracking-[0.3em]">
-              support yoink
-            </p>
-            <p className="text-sm text-overlay1 leading-relaxed max-w-md">
-              yoink is free and open source. if it saves you time or you just
-              think it&apos;s cool, drop a star on github.
-            </p>
-            <a
-              href="https://github.com/heysonder/yoink"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-press inline-block text-sm text-text border border-surface0/40 hover:bg-surface0/20 px-6 py-3 rounded-lg font-bold uppercase tracking-wider transition-all duration-200"
-            >
-              star on github
-            </a>
-          </div>
+            star on github
+          </a>
         </div>
       </section>
 
@@ -233,6 +234,7 @@ export default function LandingPage() {
             <Link href="/how" className="text-mauve/60 hover:text-mauve transition-colors duration-200">local files</Link>
             <Link href="/players" className="text-green/60 hover:text-green transition-colors duration-200">players</Link>
             <Link href="/roadmap" className="hover:text-text transition-colors duration-200">roadmap</Link>
+            <Link href="/rules" className="hover:text-text transition-colors duration-200">rules</Link>
             <Link href="/terms" className="hover:text-text transition-colors duration-200">terms</Link>
             <Link href="/privacy" className="hover:text-text transition-colors duration-200">privacy</Link>
             <a

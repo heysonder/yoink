@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import Spinner from "@/components/Spinner";
 
 type ReportType = "bug" | "feature";
 
@@ -327,13 +328,6 @@ export default function FeedbackForm() {
           className="hidden"
         />
         {errors.image && <p className="text-xs text-red">{errors.image}</p>}
-        {!errors.image && (
-          <p className="text-xs text-overlay0">
-            screenshots are uploaded with your ticket and we aim to remove them
-            within 90 days after the ticket is resolved. crop out anything
-            private first.
-          </p>
-        )}
       </div>
 
       {/* Submit */}
@@ -343,11 +337,7 @@ export default function FeedbackForm() {
         className="btn-press w-full bg-lavender hover:bg-mauve text-crust py-3 rounded-lg text-sm font-bold uppercase tracking-wider transition-all duration-200 disabled:opacity-50 disabled:bg-surface1 disabled:text-overlay0"
       >
         {submitting ? (
-          <span className="flex items-center justify-center gap-1">
-            <span className="loading-dot w-1.5 h-1.5 rounded-full bg-crust inline-block" />
-            <span className="loading-dot w-1.5 h-1.5 rounded-full bg-crust inline-block" />
-            <span className="loading-dot w-1.5 h-1.5 rounded-full bg-crust inline-block" />
-          </span>
+          <span className="animate-text-shimmer">submitting</span>
         ) : (
           "submit"
         )}

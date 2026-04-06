@@ -95,8 +95,7 @@ export default function TermsPage() {
     <div className="min-h-screen bg-grid">
       {/* Nav */}
       <nav className="border-b border-surface0/60 px-6 py-4 flex items-center justify-between backdrop-blur-sm bg-base/80 sticky top-0 z-10">
-        <Link href="/" className="flex items-center gap-3 group">
-          <div className="status-dot w-2 h-2 rounded-full bg-green" />
+        <Link href="/" className="group">
           <span className="text-sm font-bold tracking-wider uppercase text-text group-hover:text-lavender transition-colors">
             yoink
           </span>
@@ -208,6 +207,7 @@ export default function TermsPage() {
         <span>yoink</span>
         <div className="flex items-center gap-3 sm:gap-4">
           <Link href="/privacy" className="hover:text-text transition-colors duration-200">privacy</Link>
+          <Link href="/rules" className="hover:text-text transition-colors duration-200">rules</Link>
           <Link href="/roadmap" className="hover:text-text transition-colors duration-200">roadmap</Link>
           <a
             href="https://github.com/heysonder/yoink"

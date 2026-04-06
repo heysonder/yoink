@@ -20,7 +20,7 @@ export default function FeedbackPage() {
       <Header />
 
       {/* Hero */}
-      <section className="px-6 pt-20 sm:pt-32 pb-16 sm:pb-24 max-w-2xl mx-auto">
+      <section className="px-6 pt-16 sm:pt-24 pb-12 sm:pb-16 max-w-2xl mx-auto">
         <div className="space-y-6 animate-fade-in-up" style={{ opacity: 0 }}>
           <p className="text-xs text-lavender uppercase tracking-[0.3em] font-bold">
             feedback
@@ -44,23 +44,25 @@ export default function FeedbackPage() {
 
       {/* Form */}
       <section className="px-6 py-16 max-w-2xl mx-auto">
+        <FeedbackForm />
+        <div className="max-w-2xl mx-auto py-8">
+          <div className="border-t border-surface0/40" />
+        </div>
         <div
-          className="animate-fade-in-up border border-surface0/60 rounded-lg p-5 mb-5 bg-mantle/30 space-y-2"
+          className="animate-fade-in-up border border-surface0/60 rounded-lg p-5 bg-mantle/30 space-y-2"
           style={{ opacity: 0 }}
         >
           <p className="text-xs uppercase tracking-wider font-bold text-text">
-            before you submit
+            heads up
           </p>
           <p className="text-sm text-subtext0/80 leading-relaxed">
-            feedback goes to our internal Linear backlog. if you add an email,
-            we may use it to follow up. if you upload a screenshot, it will be
-            stored with the ticket. only the site owner can access that
-            workspace. optional emails and screenshots are kept for up to 90
-            days after a ticket is resolved unless they&apos;re still needed for
-            an active issue. don&apos;t include sensitive personal data.
+            submissions go to a private backlog only the site owner can see.
+            if you add an email, we&apos;ll only use it to follow up.
+            emails and screenshots are typically deleted after resolution
+            unless still needed for an active issue.
+            don&apos;t include passwords or sensitive data.
           </p>
         </div>
-        <FeedbackForm />
       </section>
 
       {/* Divider */}
