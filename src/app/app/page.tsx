@@ -890,9 +890,8 @@ export default function Home() {
       <footer className="border-t border-surface0/40 px-6 py-4 flex items-center justify-between text-xs text-overlay0/50">
         <span>yoink</span>
         <div className="flex items-center gap-3 sm:gap-4">
-          <Link href="/how" className="text-mauve/60 hover:text-mauve transition-colors duration-200 hidden sm:block">local files setup</Link>
-          <Link href="/how" className="text-mauve/60 hover:text-mauve transition-colors duration-200 sm:hidden">local files</Link>
-          <Link href="/roadmap" className="hover:text-text transition-colors duration-200">roadmap</Link>
+          <Link href="/extras" className="hover:text-text transition-colors duration-200">extras</Link>
+          <Link href="/legal" className="hover:text-text transition-colors duration-200">legal</Link>
           <a
             href="https://github.com/heysonder/yoink"
             target="_blank"

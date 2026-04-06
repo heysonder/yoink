@@ -373,14 +373,16 @@ export default function PlayersPage() {
       {/* Footer */}
       <footer className="border-t border-surface0/40 px-6 py-4 flex items-center justify-between text-xs text-overlay0/50">
         <span>yoink</span>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <Link href="/extras" className="hover:text-text transition-colors duration-200">extras</Link>
+          <Link href="/legal" className="hover:text-text transition-colors duration-200">legal</Link>
           <a
             href="https://github.com/heysonder/yoink"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-text transition-colors duration-200"
           >
-            star on github
+            source
           </a>
         </div>
       </footer>

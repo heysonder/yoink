@@ -6,6 +6,8 @@ paste a music link. get the file.
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/O5O31P50IY)
 
+feedback is greatly appreciated — i thoroughly read every request. **[leave feedback](https://yoinkify.com/r/f)**
+
 <p align="center">
   <img src="docs/demo.gif" alt="yoink demo" width="720" />
 </p>

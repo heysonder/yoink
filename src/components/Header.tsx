@@ -7,7 +7,7 @@ export default function Header() {
     <header className="border-b border-surface0/60 px-6 py-4 flex items-center justify-between backdrop-blur-sm bg-base/80 sticky top-0 z-10">
       <Link
         href="/"
-        className="text-sm font-bold tracking-wider uppercase text-text hover:text-lavender transition-colors duration-200 animate-text-glow"
+        className="text-sm font-bold tracking-wider uppercase text-text hover:text-lavender transition-colors duration-200"
       >
         yoink
       </Link>
@@ -18,7 +18,7 @@ export default function Header() {
           href="https://github.com/heysonder/yoink"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-surface2 hover:text-lavender transition-colors duration-200"
+          className="text-surface2 hover:text-lavender transition-colors duration-200 animate-text-shimmer-silver"
         >
           star on github
         </a>
