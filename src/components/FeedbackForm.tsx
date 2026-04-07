@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import Spinner from "@/components/Spinner";
+
 
 type ReportType = "bug" | "feature";
 
