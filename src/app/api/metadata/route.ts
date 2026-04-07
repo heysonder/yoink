@@ -5,7 +5,6 @@ import { resolveTrack, resolvePlaylist, resolveAlbum, getCached, setCache } from
 import { rateLimit } from "@/lib/ratelimit";
 import { getRequestSource } from "@/lib/request-source";
 import { getClientIp, getRequestLogId, summarizeUrlForLogs } from "@/lib/request-privacy";
-import { verifyTurnstile } from "@/lib/turnstile";
 
 async function enrichWithVideoCover(track: TrackInfo): Promise<TrackInfo> {
   try {
@@ -32,16 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     const source = getRequestSource(request);
-    const body = await request.json();
-    const { url, turnstileToken } = body;
-
-    // Verify captcha if configured
-    if (process.env.TURNSTILE_SECRET_KEY) {
-      if (!turnstileToken || !(await verifyTurnstile(turnstileToken, ip))) {
-        return NextResponse.json({ error: "captcha verification failed — please try again" }, { status: 403 });
-      }
-    }
-
+    const { url } = await request.json();
     console.log(
       `[metadata] [${source}] ${logId} → ${typeof url === "string" ? summarizeUrlForLogs(url) : "invalid"}`
     );
