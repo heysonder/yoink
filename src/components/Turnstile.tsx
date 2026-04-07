@@ -31,7 +31,7 @@ export default function Turnstile({ onToken, onExpire }: TurnstileProps) {
     widgetIdRef.current = window.turnstile.render(containerRef.current, {
       sitekey: SITE_KEY,
       theme: "dark",
-      appearance: "managed",
+      appearance: "interaction-only",
       callback: (token: string) => onToken(token),
       "expired-callback": () => onExpire?.(),
     });
