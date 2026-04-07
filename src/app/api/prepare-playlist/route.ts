@@ -177,13 +177,22 @@ export async function POST(request: NextRequest) {
         };
 
         for (let i = 0; i < playlist!.tracks.length; i += CONCURRENCY) {
+          // Random delay between batches to avoid hammering sources
+          if (i > 0) {
+            const delay = 1000 + Math.random() * 2000; // 1-3s
+            await new Promise((r) => setTimeout(r, delay));
+          }
+
           const batch = playlist!.tracks.slice(i, i + CONCURRENCY);
           const batchIndices = batch.map((_, j) => i + j);
 
           send({ type: "batch", indices: batchIndices });
 
           const batchResults = await Promise.allSettled(
-            batch.map((track, j) => prepareWithRetry(track, i + j))
+            batch.map(async (track, j) => {
+              if (j > 0) await new Promise((r) => setTimeout(r, 500 + Math.random() * 1000)); // stagger within batch
+              return prepareWithRetry(track, i + j);
+            })
           );
 
           for (let j = 0; j < batchResults.length; j++) {
