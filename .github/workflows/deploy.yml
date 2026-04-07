@@ -4,11 +4,32 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build deploy image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: yoink:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Package image
+        run: docker save yoink:latest | gzip -1 > yoink-image.tar.gz
+
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
@@ -20,15 +41,21 @@ jobs:
       - name: Deploy
         run: |
           for attempt in 1 2 3; do
-            if ssh \
+            if scp \
+              -i ~/.ssh/deploy_key \
+              -o StrictHostKeyChecking=accept-new \
+              -o ConnectTimeout=30 \
+              yoink-image.tar.gz root@"$VPS_HOST":/tmp/yoink-image.tar.gz && \
+              ssh \
               -i ~/.ssh/deploy_key \
               -o StrictHostKeyChecking=accept-new \
               -o ConnectTimeout=30 \
               root@"$VPS_HOST" '
               cd /root/services/yoink &&
               git pull origin main &&
-              docker compose build &&
-              docker compose up -d --force-recreate
+              docker load < /tmp/yoink-image.tar.gz &&
+              rm -f /tmp/yoink-image.tar.gz &&
+              docker compose up -d --no-build --remove-orphans
             '; then
               exit 0
             fi

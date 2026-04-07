@@ -1,12 +1,17 @@
 FROM node:24-slim AS base
 
-RUN apt-get update && apt-get install -y ffmpeg curl python3 python3-pip && rm -rf /var/lib/apt/lists/* \
-    && pip3 install --break-system-packages yt-dlp
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    NPM_CONFIG_UPDATE_NOTIFIER=false \
+    NPM_CONFIG_FUND=false \
+    NPM_CONFIG_AUDIT=false
+
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg curl python3 python3-pip && rm -rf /var/lib/apt/lists/* \
+    && pip3 install --no-cache-dir --break-system-packages yt-dlp
 
 FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --no-audit --no-fund
 
 FROM base AS builder
 WORKDIR /app

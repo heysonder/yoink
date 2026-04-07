@@ -1,4 +1,10 @@
 node_modules
 .next
 .git
+.github
+.claude
+docs
+README.md
+CONTRIBUTING.md
+deploy.sh
 *.log
