@@ -10,6 +10,7 @@ import { unpackEnvelope } from "@/lib/client/envelope";
 import { encodeInBrowser, canUseClientFFmpeg, type FFmpegStatus } from "@/lib/client/ffmpeg-bridge";
 import { zipSync } from "fflate";
 import Spinner from "@/components/Spinner";
+import { generateChallenge, solveChallenge } from "@/lib/proof-of-work";
 
 interface TrackInfo {
   name: string;
@@ -35,7 +36,7 @@ interface QualityInfo {
   bitrate: string;
 }
 
-type AppState = "idle" | "fetching" | "ready" | "downloading" | "done" | "error";
+type AppState = "idle" | "thinking" | "fetching" | "ready" | "downloading" | "done" | "error";
 
 export default function Home() {
   const [state, setState] = useState<AppState>("idle");
@@ -54,7 +55,6 @@ export default function Home() {
   const [syncedLyrics, setSyncedLyrics] = useState(false);
   const abortRef = useRef(false);
   const downloadTriggeredRef = useRef(false);
-
   // Enter key triggers download when track/playlist is ready
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -73,7 +73,7 @@ export default function Home() {
   });
 
   const handleSubmit = async (url: string) => {
-    setState("fetching");
+    setState("thinking");
     setError("");
     setErrorRequestId(null);
     setIsRateLimited(false);
@@ -86,10 +86,16 @@ export default function Home() {
     downloadTriggeredRef.current = false;
 
     try {
+      // Proof-of-work challenge
+      const challenge = generateChallenge(16);
+      const powSolution = await solveChallenge(challenge);
+
+      setState("fetching");
+
       const res = await fetch("/api/metadata", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, pow: powSolution }),
       });
 
       if (!res.ok) {
@@ -615,11 +621,17 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Thinking (proof-of-work) */}
+          {state === "thinking" && (
+            <div className="animate-fade-in-up border border-surface0/60 rounded-lg p-6 flex items-center gap-4 bg-mantle/30" style={{ opacity: 0 }}>
+              <span className="text-sm text-subtext0 animate-text-shimmer">thinking...</span>
+            </div>
+          )}
+
           {/* Loading */}
           {state === "fetching" && (
             <div className="animate-fade-in-up border border-surface0/60 rounded-lg p-6 flex items-center gap-4 bg-mantle/30" style={{ opacity: 0 }}>
-              <Spinner className="w-4 h-4 text-lavender" />
-              <span className="text-sm text-subtext0">fetching info</span>
+              <span className="text-sm text-subtext0 animate-text-shimmer">fetching info</span>
             </div>
           )}
 

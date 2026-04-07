@@ -5,6 +5,7 @@ import { resolveTrack, resolvePlaylist, resolveAlbum, getCached, setCache } from
 import { rateLimit } from "@/lib/ratelimit";
 import { getRequestSource } from "@/lib/request-source";
 import { getClientIp, getRequestLogId, summarizeUrlForLogs } from "@/lib/request-privacy";
+import { verifyProofOfWork } from "@/lib/proof-of-work-verify";
 
 async function enrichWithVideoCover(track: TrackInfo): Promise<TrackInfo> {
   try {
@@ -31,7 +32,14 @@ export async function POST(request: NextRequest) {
     }
 
     const source = getRequestSource(request);
-    const { url } = await request.json();
+    const body = await request.json();
+    const { url, pow } = body;
+
+    // Verify proof-of-work
+    if (pow && !verifyProofOfWork(pow)) {
+      return NextResponse.json({ error: "verification failed — please try again" }, { status: 403 });
+    }
+
     console.log(
       `[metadata] [${source}] ${logId} → ${typeof url === "string" ? summarizeUrlForLogs(url) : "invalid"}`
     );
