@@ -7,20 +7,23 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
         env:
           SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-          VPS_HOST: ${{ secrets.VPS_HOST }}
 
       - name: Deploy
         run: |
-          ssh -i ~/.ssh/deploy_key root@"$VPS_HOST" '
+          ssh \
+            -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=30 \
+            root@"$VPS_HOST" '
             cd /root/services/yoink &&
             git pull origin main &&
             docker compose build &&
