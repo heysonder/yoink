@@ -2,6 +2,7 @@ import type { TrackInfo } from "./spotify";
 import { resolveSonglink } from "./songlink";
 import { fetchDeezerAudio, lookupDeezerByIsrc, searchDeezerByTitleArtist } from "./deezer";
 import { lookupTidalByIsrc, searchTidalByTitleArtist, fetchTidalAudio } from "./tidal";
+import { withTidalThrottle } from "./semaphore";
 import { searchYouTube, getAudioStreamUrl, ytdlpDownload } from "./youtube";
 import type { AudioQualityInfo } from "./ffprobe";
 import type { AcoustIdResult } from "./acoustid";
@@ -90,7 +91,7 @@ async function tryTidal(track: TrackInfo, preferHiRes: boolean): Promise<AudioRe
     }
 
     console.log("[audio] got tidal id:", tidalId);
-    const result = await fetchTidalAudio(tidalId, track, preferHiRes);
+    const result = await withTidalThrottle(() => fetchTidalAudio(tidalId, track, preferHiRes));
     if (!result) {
       console.log("[audio] tidal fetch returned null");
       return null;
