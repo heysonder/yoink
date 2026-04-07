@@ -19,15 +19,27 @@ jobs:
 
       - name: Deploy
         run: |
-          ssh \
-            -i ~/.ssh/deploy_key \
-            -o StrictHostKeyChecking=accept-new \
-            -o ConnectTimeout=30 \
-            root@"$VPS_HOST" '
-            cd /root/services/yoink &&
-            git pull origin main &&
-            docker compose build &&
-            docker compose up -d --force-recreate
-          '
+          for attempt in 1 2 3; do
+            if ssh \
+              -i ~/.ssh/deploy_key \
+              -o StrictHostKeyChecking=accept-new \
+              -o ConnectTimeout=30 \
+              root@"$VPS_HOST" '
+              cd /root/services/yoink &&
+              git pull origin main &&
+              docker compose build &&
+              docker compose up -d --force-recreate
+            '; then
+              exit 0
+            fi
+
+            if [ "$attempt" -lt 3 ]; then
+              echo "SSH deploy attempt $attempt failed, retrying in 15 seconds..."
+              sleep 15
+            fi
+          done
+
+          echo "SSH deploy failed after 3 attempts"
+          exit 1
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
