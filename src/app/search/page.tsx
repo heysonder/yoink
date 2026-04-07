@@ -121,7 +121,7 @@ export default function SearchPage() {
       const downloadUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = downloadUrl;
-      a.download = `${selectedTrack.artist} - ${selectedTrack.name}.${ext}`;
+      a.download = `${selectedTrack.artist} - ${selectedTrack.name} · yoink.${ext}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

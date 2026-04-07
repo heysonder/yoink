@@ -165,7 +165,7 @@ export default function Home() {
         const downloadUrl = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = downloadUrl;
-        a.download = `${trackInfo.artist} - ${trackInfo.name}.${ext}`;
+        a.download = `${trackInfo.artist} - ${trackInfo.name} · yoink.${ext}`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -211,7 +211,7 @@ export default function Home() {
       const downloadUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = downloadUrl;
-      a.download = `${trackInfo.artist} - ${trackInfo.name}.${ext}`;
+      a.download = `${trackInfo.artist} - ${trackInfo.name} · yoink.${ext}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

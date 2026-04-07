@@ -205,7 +205,7 @@ async function processTrack(
           })
         );
       } catch {
-        const filename = `${track.artist} - ${track.name}.${audio.format}`;
+        const filename = `${track.artist} - ${track.name} · yoink.${audio.format}`;
         return { filename, buffer: audio.buffer };
       }
     }
@@ -216,7 +216,7 @@ async function processTrack(
       if (track.explicit) finalBuffer = setExplicitTag(finalBuffer);
       if (catalogIds) finalBuffer = setCatalogIds(finalBuffer, catalogIds);
     }
-    const filename = `${track.artist} - ${track.name}.${outputExt}`;
+    const filename = `${track.artist} - ${track.name} · yoink.${outputExt}`;
     return { filename, buffer: finalBuffer as Buffer };
   } finally {
     try {

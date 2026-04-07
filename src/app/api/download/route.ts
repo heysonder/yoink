@@ -278,7 +278,7 @@ export async function POST(request: NextRequest) {
         // ffmpeg completely unavailable — serve raw audio
         const ext = audio.format;
         const mimeMap: Record<string, string> = { webm: "audio/webm", mp3: "audio/mpeg", flac: "audio/flac" };
-        const filename = `${track.artist} - ${track.name}.${ext}`;
+        const filename = `${track.artist} - ${track.name} · yoink.${ext}`;
         const rawHeaders: Record<string, string> = {
           "Content-Type": mimeMap[ext] || "application/octet-stream",
           "Content-Disposition": `attachment; filename="${encodeURIComponent(filename)}"`,
