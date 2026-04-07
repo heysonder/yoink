@@ -33,7 +33,7 @@ function getCachedMetadata(key: string): unknown | null {
 
   metadataCache.delete(key);
   metadataCache.set(key, entry);
-  return entry.data;
+  return structuredClone(entry.data);
 }
 
 function setCachedMetadata(key: string, data: unknown) {
@@ -174,11 +174,11 @@ async function enrichMetadataTracks(tracks: TrackInfo[]): Promise<TrackInfo[]> {
 
 function cacheTrackForPrepare(url: string, response: unknown) {
   if (!response || typeof response !== "object") return;
-  const type = (response as { type?: unknown }).type;
-  if (type !== "track") return;
+  const obj = response as Record<string, unknown>;
+  if (obj.type !== "track") return;
 
-  const track = response as TrackInfo & { type: "track" };
-  setCache(url, track);
+  const { type: _, _youtubeId: _y, _originalPlatform: _p, ...trackFields } = obj;
+  setCache(url, trackFields as unknown as TrackInfo);
 }
 
 export async function POST(request: NextRequest) {

@@ -1466,8 +1466,11 @@ export async function getSpotifyFromUrl(url: string, options?: SpotifyFromUrlOpt
     fetchSpotifyInternalCollectionData(urlType, id),
     fetchSpotifyPageMetadata(urlType, id),
   ]);
-  const entity = internal?.entity || null;
-  if (!internal && !entity) return null;
+  let entity = internal?.entity || null;
+  if (!internal && !entity) {
+    entity = await fetchSpotifyEmbedEntity(urlType, id);
+    if (!entity) return null;
+  }
 
   const collectionName = internal?.name || (entity && typeof entity.name === "string" ? normalizeSpotifyText(entity.name) : "Spotify");
   const embedImages = entity ? extractSpotifyImages(entity) : [];
