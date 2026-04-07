@@ -40,6 +40,10 @@ firebase-debug.log
 
 # claude
 CLAUDE.md
+.claude/
+
+# docs (internal)
+docs/superpowers/
 
 # download counter
 .download-count
