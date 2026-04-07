@@ -11,6 +11,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -41,11 +43,11 @@ jobs:
       - name: Deploy
         run: |
           for attempt in 1 2 3; do
-            if scp \
+            if ssh \
               -i ~/.ssh/deploy_key \
               -o StrictHostKeyChecking=accept-new \
               -o ConnectTimeout=30 \
-              yoink-image.tar.gz root@"$VPS_HOST":/tmp/yoink-image.tar.gz && \
+              root@"$VPS_HOST" 'cat > /tmp/yoink-image.tar.gz' < yoink-image.tar.gz && \
               ssh \
               -i ~/.ssh/deploy_key \
               -o StrictHostKeyChecking=accept-new \
