@@ -714,7 +714,7 @@ export default function Home() {
                       style={{ opacity: 0 }}
                       poster={track.albumArt}
                     />
-                  ) : (
+                  ) : track.albumArt ? (
                     <Image
                       src={track.albumArt}
                       alt={track.album}
@@ -724,6 +724,8 @@ export default function Home() {
                       style={{ opacity: 0 }}
                       unoptimized
                     />
+                  ) : (
+                    <div className="art-glow w-full h-full rounded-lg bg-surface0/30" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">

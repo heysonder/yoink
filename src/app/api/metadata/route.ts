@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPlaylistInfo, getAlbumInfo, getArtistTopTracks, detectUrlType, detectPlatform, type TrackInfo } from "@/lib/spotify";
 import { lookupTidalVideoCover } from "@/lib/tidal";
 import { searchItunesTrack } from "@/lib/itunes";
-import { resolveTrack, resolvePlaylist, resolveAlbum, resolveArtist, getSpotifyFromUrl, searchDeezerStructured, type SpotifyFromUrlResponse, type SpotifyFromUrlTrack } from "@/lib/resolve-track";
+import { resolveTrack, resolvePlaylist, resolveAlbum, resolveArtist, getSpotifyFromUrl, searchDeezerStructured, setCache, type SpotifyFromUrlResponse, type SpotifyFromUrlTrack } from "@/lib/resolve-track";
 import { rateLimit } from "@/lib/ratelimit";
 import { getRequestSource } from "@/lib/request-source";
 import { getClientIp, getRequestLogId, summarizeUrlForLogs } from "@/lib/request-privacy";
@@ -10,6 +10,7 @@ import { verifyProofOfWork } from "@/lib/proof-of-work-verify";
 
 const METADATA_CACHE_TTL = 15 * 60 * 1000;
 const METADATA_CACHE_MAX = 200;
+const MAX_FULL_METADATA_TRACKS = 200;
 const metadataCache = new Map<string, { data: unknown; expiresAt: number }>();
 
 function normalizeMetadataCacheKey(input: string): string {
@@ -171,6 +172,15 @@ async function enrichMetadataTracks(tracks: TrackInfo[]): Promise<TrackInfo[]> {
   return enriched;
 }
 
+function cacheTrackForPrepare(url: string, response: unknown) {
+  if (!response || typeof response !== "object") return;
+  const type = (response as { type?: unknown }).type;
+  if (type !== "track") return;
+
+  const track = response as TrackInfo & { type: "track" };
+  setCache(url, track);
+}
+
 export async function POST(request: NextRequest) {
   const logId = getRequestLogId(request);
 
@@ -207,6 +217,7 @@ export async function POST(request: NextRequest) {
     // Check cache
     const cached = getCachedMetadata(cacheKey);
     if (cached) {
+      cacheTrackForPrepare(url, cached);
       return NextResponse.json(cached);
     }
 
@@ -233,11 +244,16 @@ export async function POST(request: NextRequest) {
           const enriched = await enrichWithVideoCover(baseTrack);
           const response = { type: "track", ...enriched };
           setCachedMetadata(cacheKey, response);
+          setCache(url, enriched);
           return NextResponse.json(response);
         }
         if (mapped.type === "playlist") {
+          const baseTracks = mapped.playlist.tracks;
+          const enrichedTracks = fullMetadata
+            ? await enrichMetadataTracks(baseTracks.slice(0, MAX_FULL_METADATA_TRACKS))
+            : baseTracks;
           const playlist = fullMetadata
-            ? { ...mapped.playlist, tracks: await enrichMetadataTracks(mapped.playlist.tracks) }
+            ? { ...mapped.playlist, tracks: [...enrichedTracks, ...baseTracks.slice(MAX_FULL_METADATA_TRACKS)] }
             : mapped.playlist;
           const response = { type: "playlist", ...playlist };
           setCachedMetadata(cacheKey, response);
@@ -318,6 +334,7 @@ export async function POST(request: NextRequest) {
       }
       const response = { type: "track", ...enriched, ...extra };
       setCachedMetadata(cacheKey, response);
+      setCache(url, enriched);
       return NextResponse.json(response);
     }
 

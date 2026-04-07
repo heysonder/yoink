@@ -235,14 +235,18 @@ export default function SearchPage() {
                     onClick={() => handleSelect(t)}
                     className="w-full flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3 border-b border-surface0/20 last:border-b-0 hover:bg-surface0/20 transition-colors duration-150 text-left"
                   >
-                    <Image
-                      src={t.albumArt}
-                      alt={t.album}
-                      width={40}
-                      height={40}
-                      className="w-10 h-10 rounded object-cover flex-shrink-0"
-                      unoptimized
-                    />
+                    {t.albumArt ? (
+                      <Image
+                        src={t.albumArt}
+                        alt={t.album}
+                        width={40}
+                        height={40}
+                        className="w-10 h-10 rounded object-cover flex-shrink-0"
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded bg-surface0/30 flex-shrink-0" />
+                    )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-text truncate">
                         {t.name}
@@ -286,15 +290,19 @@ export default function SearchPage() {
 
               <div className="p-4 sm:p-6 flex gap-4 sm:gap-5">
                 <div className="w-[72px] h-[72px] sm:w-[100px] sm:h-[100px] flex-shrink-0">
-                  <Image
-                    src={selectedTrack.albumArt}
-                    alt={selectedTrack.album}
-                    width={100}
-                    height={100}
-                    className="art-glow w-full h-full rounded-lg object-cover animate-fade-in"
-                    style={{ opacity: 0 }}
-                    unoptimized
-                  />
+                  {selectedTrack.albumArt ? (
+                    <Image
+                      src={selectedTrack.albumArt}
+                      alt={selectedTrack.album}
+                      width={100}
+                      height={100}
+                      className="art-glow w-full h-full rounded-lg object-cover animate-fade-in"
+                      style={{ opacity: 0 }}
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="art-glow w-full h-full rounded-lg bg-surface0/30" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
                   <p className="text-base font-bold text-text truncate animate-slide-in" style={{ opacity: 0 }}>
