@@ -5,7 +5,7 @@ import { resolveTrack, resolvePlaylist, resolveAlbum, getCached, setCache } from
 import { rateLimit } from "@/lib/ratelimit";
 import { getRequestSource } from "@/lib/request-source";
 import { getClientIp, getRequestLogId, summarizeUrlForLogs } from "@/lib/request-privacy";
-import { verifyTurnstile } from "@/lib/turnstile";
+import { verifyProofOfWork } from "@/lib/proof-of-work-verify";
 
 async function enrichWithVideoCover(track: TrackInfo): Promise<TrackInfo> {
   try {
@@ -33,13 +33,11 @@ export async function POST(request: NextRequest) {
 
     const source = getRequestSource(request);
     const body = await request.json();
-    const { url, turnstileToken } = body;
+    const { url, pow } = body;
 
-    // Verify captcha if configured
-    if (process.env.TURNSTILE_SECRET_KEY) {
-      if (!turnstileToken || !(await verifyTurnstile(turnstileToken, ip))) {
-        return NextResponse.json({ error: "captcha verification failed — please try again" }, { status: 403 });
-      }
+    // Verify proof-of-work
+    if (pow && !verifyProofOfWork(pow)) {
+      return NextResponse.json({ error: "verification failed — please try again" }, { status: 403 });
     }
 
     console.log(
