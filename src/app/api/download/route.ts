@@ -309,7 +309,7 @@ export async function POST(request: NextRequest) {
       if (track.explicit) finalBuffer = setExplicitTag(finalBuffer);
       if (catalogIds) finalBuffer = setCatalogIds(finalBuffer, catalogIds);
     }
-    const filename = `${track.artist} - ${track.name}.${outputExt}`;
+    const filename = `${track.artist} - ${track.name} · yoink.${outputExt}`;
     const contentType = wantAlac ? "audio/mp4" : wantFlac ? "audio/flac" : "audio/mpeg";
     const qualityLabel = (wantFlac || wantAlac) && audio.format === "flac" ? "lossless" : `${audio.bitrate}`;
 

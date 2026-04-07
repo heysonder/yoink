@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import Header from "@/components/Header";
 import SpotifyInput from "@/components/SpotifyInput";
 import FormatToggle, { type Format } from "@/components/FormatToggle";
@@ -9,7 +10,6 @@ import MigrationBanner from "@/components/MigrationBanner";
 import { unpackEnvelope } from "@/lib/client/envelope";
 import { encodeInBrowser, canUseClientFFmpeg, type FFmpegStatus } from "@/lib/client/ffmpeg-bridge";
 import { zipSync } from "fflate";
-import Spinner from "@/components/Spinner";
 import { generateChallenge, solveChallenge } from "@/lib/proof-of-work";
 
 interface TrackInfo {
@@ -37,6 +37,11 @@ interface QualityInfo {
 }
 
 type AppState = "idle" | "thinking" | "fetching" | "ready" | "downloading" | "done" | "error";
+
+function shouldRequestFullMetadata(url: string): boolean {
+  void url;
+  return true;
+}
 
 export default function Home() {
   const [state, setState] = useState<AppState>("idle");
@@ -95,7 +100,11 @@ export default function Home() {
       const res = await fetch("/api/metadata", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, pow: powSolution }),
+        body: JSON.stringify({
+          url,
+          pow: powSolution,
+          fullMetadata: shouldRequestFullMetadata(url),
+        }),
       });
 
       if (!res.ok) {
@@ -222,7 +231,7 @@ export default function Home() {
       setDownloadPhase("");
       return false;
     }
-  }, [format, genreSource, originalUrl]);
+  }, [format, genreSource, originalUrl, syncedLyrics]);
 
   const handleDownload = async () => {
     if (!track) return;
@@ -550,7 +559,6 @@ export default function Home() {
   };
 
   const doneCount = trackStatuses.filter((s) => s === "done").length;
-  const errorCount = trackStatuses.filter((s) => s === "error").length;
   const totalCount = trackStatuses.length;
 
   return (
@@ -707,11 +715,14 @@ export default function Home() {
                       poster={track.albumArt}
                     />
                   ) : (
-                    <img
+                    <Image
                       src={track.albumArt}
                       alt={track.album}
-                      className="art-glow w-full h-full rounded-lg object-cover animate-fade-in"
+                      fill
+                      sizes="(max-width: 640px) 72px, 100px"
+                      className="art-glow rounded-lg object-cover animate-fade-in"
                       style={{ opacity: 0 }}
+                      unoptimized
                     />
                   )}
                 </div>
@@ -787,12 +798,17 @@ export default function Home() {
               {/* Playlist header */}
               <div className="p-4 sm:p-6 flex gap-4 sm:gap-5">
                 {playlist.image && (
-                  <img
-                    src={playlist.image}
-                    alt={playlist.name}
-                    className="art-glow w-[72px] h-[72px] sm:w-[100px] sm:h-[100px] rounded-lg object-cover flex-shrink-0 animate-fade-in"
-                    style={{ opacity: 0 }}
-                  />
+                  <div className="relative w-[72px] h-[72px] sm:w-[100px] sm:h-[100px] flex-shrink-0">
+                    <Image
+                      src={playlist.image}
+                      alt={playlist.name}
+                      fill
+                      sizes="(max-width: 640px) 72px, 100px"
+                      className="art-glow rounded-lg object-cover animate-fade-in"
+                      style={{ opacity: 0 }}
+                      unoptimized
+                    />
+                  </div>
                 )}
                 <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
                   <p className="text-base font-bold text-text truncate animate-slide-in" style={{ opacity: 0 }}>
@@ -824,8 +840,8 @@ export default function Home() {
                     }`}
                   >
                     {/* Status indicator */}
-                    <div className="flex-shrink-0 w-5 text-center">
-                      {trackStatuses[i] === "pending" && (
+                    <div className={`flex-shrink-0 text-center ${trackStatuses[i] === "pending" && t.albumArt ? "w-0 overflow-hidden" : "w-5"}`}>
+                      {trackStatuses[i] === "pending" && !t.albumArt && (
                         <span className="text-xs text-overlay0/50">{i + 1}</span>
                       )}
                       {trackStatuses[i] === "downloading" && (
@@ -840,6 +856,19 @@ export default function Home() {
                     </div>
 
                     {/* Track info */}
+                    {t.albumArt ? (
+                      <Image
+                        src={t.albumArt}
+                        alt={t.album}
+                        width={40}
+                        height={40}
+                        className="w-10 h-10 rounded object-cover flex-shrink-0"
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded bg-surface0/30 flex-shrink-0" />
+                    )}
+
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm truncate ${
                         trackStatuses[i] === "downloading" ? "animate-text-shimmer text-lavender" : trackStatuses[i] === "done" ? "text-subtext0" : "text-text"

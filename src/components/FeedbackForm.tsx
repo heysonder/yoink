@@ -281,6 +281,8 @@ export default function FeedbackForm() {
         </label>
         {imagePreview ? (
           <div className="border border-surface0 rounded-lg p-3 bg-surface0/30 space-y-3">
+            {/* Local blob preview; next/image adds no value here. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={imagePreview}
               alt="Upload preview"

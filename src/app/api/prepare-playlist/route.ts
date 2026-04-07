@@ -4,7 +4,7 @@ import { lookupItunesGenre, lookupItunesCatalogIds } from "@/lib/itunes";
 import { fetchBestAudio } from "@/lib/audio-sources";
 import { fetchLyrics } from "@/lib/lyrics";
 import { rateLimit } from "@/lib/ratelimit";
-import { resolvePlaylist, resolveAlbum, resolveSpotifyTrack, searchDeezerStructured } from "@/lib/resolve-track";
+import { resolvePlaylist, resolveAlbum, resolveArtist, resolveSpotifyTrack, searchDeezerStructured } from "@/lib/resolve-track";
 import { getRequestSource } from "@/lib/request-source";
 import { buildEnvelopeMetadata, packEnvelope } from "@/lib/envelope";
 import { getClientIp, getRequestLogId, summarizeUrlForLogs } from "@/lib/request-privacy";
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
     } else if (urlType === "artist") {
       try { playlist = await getArtistTopTracks(url); } catch (e) {
         console.log("[prepare-playlist] artist API failed:", e instanceof Error ? e.message : e);
-        // No embed fallback for artists
+        playlist = await resolveArtist(url);
       }
     } else {
       try { playlist = await getPlaylistInfo(url); } catch (e) {
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!playlist) {
-      return NextResponse.json({ error: "couldn't load this — Spotify API may require premium" }, { status: 503 });
+      return NextResponse.json({ error: "couldn't load this right now" }, { status: 503 });
     }
 
     // Enrich embed-scraped tracks (no ISRC/albumArt) with Deezer/iTunes metadata

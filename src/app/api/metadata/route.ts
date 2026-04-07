@@ -1,20 +1,174 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPlaylistInfo, getAlbumInfo, getArtistTopTracks, detectUrlType, detectPlatform, type TrackInfo } from "@/lib/spotify";
 import { lookupTidalVideoCover } from "@/lib/tidal";
-import { resolveTrack, resolvePlaylist, resolveAlbum, getCached, setCache } from "@/lib/resolve-track";
+import { searchItunesTrack } from "@/lib/itunes";
+import { resolveTrack, resolvePlaylist, resolveAlbum, resolveArtist, getSpotifyFromUrl, searchDeezerStructured, type SpotifyFromUrlResponse, type SpotifyFromUrlTrack } from "@/lib/resolve-track";
 import { rateLimit } from "@/lib/ratelimit";
 import { getRequestSource } from "@/lib/request-source";
 import { getClientIp, getRequestLogId, summarizeUrlForLogs } from "@/lib/request-privacy";
 import { verifyProofOfWork } from "@/lib/proof-of-work-verify";
 
+const METADATA_CACHE_TTL = 15 * 60 * 1000;
+const METADATA_CACHE_MAX = 200;
+const metadataCache = new Map<string, { data: unknown; expiresAt: number }>();
+
+function normalizeMetadataCacheKey(input: string): string {
+  try {
+    const url = new URL(input);
+    if (!url.hostname.includes("spotify.com")) return input.trim();
+    return `${url.hostname.toLowerCase()}${url.pathname.replace(/\/$/, "")}`;
+  } catch {
+    return input.trim();
+  }
+}
+
+function getCachedMetadata(key: string): unknown | null {
+  const entry = metadataCache.get(key);
+  if (!entry) return null;
+  if (Date.now() >= entry.expiresAt) {
+    metadataCache.delete(key);
+    return null;
+  }
+
+  metadataCache.delete(key);
+  metadataCache.set(key, entry);
+  return entry.data;
+}
+
+function setCachedMetadata(key: string, data: unknown) {
+  if (metadataCache.has(key)) {
+    metadataCache.delete(key);
+  }
+
+  metadataCache.set(key, { data, expiresAt: Date.now() + METADATA_CACHE_TTL });
+
+  const now = Date.now();
+  for (const [cacheKey, entry] of metadataCache) {
+    if (entry.expiresAt <= now) metadataCache.delete(cacheKey);
+  }
+
+  while (metadataCache.size > METADATA_CACHE_MAX) {
+    const oldestKey = metadataCache.keys().next().value;
+    if (!oldestKey) break;
+    metadataCache.delete(oldestKey);
+  }
+}
+
 async function enrichWithVideoCover(track: TrackInfo): Promise<TrackInfo> {
   try {
-    const videoCover = await lookupTidalVideoCover(track);
+    const videoCover = await Promise.race<string | null>([
+      lookupTidalVideoCover(track),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 700)),
+    ]);
     if (videoCover) track.videoCover = videoCover;
   } catch {
     // Never block metadata response
   }
   return track;
+}
+
+function formatDuration(ms: number): string {
+  const minutes = Math.floor(ms / 60000);
+  const seconds = Math.floor((ms % 60000) / 1000);
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
+function mapUnfurlTrackToMetadataTrack(
+  track: SpotifyFromUrlTrack,
+  collection: SpotifyFromUrlResponse["playlist_info"],
+): TrackInfo {
+  const artist = track.artists.join(", ");
+  const albumArtist = track.album_artists?.length
+    ? track.album_artists.join(", ")
+    : (collection.type === "album" || collection.type === "artist" ? artist : null);
+  return {
+    name: track.name,
+    artist,
+    albumArtist,
+    album: track.album,
+    albumArt: track.image?.url || track.thumb_image?.url || collection.images[0]?.url || "",
+    duration: formatDuration(track.duration_ms),
+    durationMs: track.duration_ms,
+    isrc: track.external_ids?.isrc || null,
+    genre: null,
+    releaseDate: track.release_date || collection.release_date || null,
+    spotifyUrl: track.external_url,
+    explicit: track.explicit,
+    trackNumber: track.track_number,
+    discNumber: track.disc_number,
+    label: null,
+    copyright: track.copyright || null,
+    totalTracks: track.total_tracks ?? (collection.type === "album" ? collection.total_tracks : null),
+  };
+}
+
+function mapUnfurlToMetadata(data: SpotifyFromUrlResponse) {
+  const tracks = data.tracks.map((track) => mapUnfurlTrackToMetadataTrack(track, data.playlist_info));
+  if (data.playlist_info.type === "track") {
+    return { type: "track" as const, track: tracks[0] || null };
+  }
+
+  return {
+    type: "playlist" as const,
+    playlist: {
+      name: data.playlist_info.name,
+      image: data.playlist_info.images[0]?.url || tracks[0]?.albumArt || "",
+      tracks,
+    },
+  };
+}
+
+async function enrichMetadataTrack(track: TrackInfo): Promise<TrackInfo> {
+  const [deezerResult, itunesResult] = await Promise.allSettled([
+    searchDeezerStructured(track.name, track.artist, track.album || null),
+    searchItunesTrack(track.artist, track.name, track.album || null),
+  ]);
+
+  let enriched = { ...track };
+
+  if (deezerResult.status === "fulfilled" && deezerResult.value) {
+    const deezer = deezerResult.value;
+    enriched = {
+      ...enriched,
+      albumArtist: enriched.albumArtist || deezer.albumArtist,
+      album: enriched.album || deezer.album,
+      albumArt: enriched.albumArt || deezer.albumArt,
+      isrc: enriched.isrc || deezer.isrc,
+      releaseDate: enriched.releaseDate || deezer.releaseDate,
+      totalTracks: enriched.totalTracks ?? deezer.totalTracks,
+    };
+  }
+
+  if (itunesResult.status === "fulfilled" && itunesResult.value) {
+    const itunes = itunesResult.value;
+    enriched = {
+      ...enriched,
+      albumArtist: enriched.albumArtist || itunes.albumArtist,
+      album: enriched.album || itunes.album,
+      albumArt: enriched.albumArt || itunes.albumArt,
+      genre: enriched.genre || itunes.genre,
+      releaseDate: enriched.releaseDate || itunes.releaseDate,
+      totalTracks: enriched.totalTracks ?? itunes.totalTracks,
+      copyright: enriched.copyright || itunes.copyright,
+      explicit: enriched.explicit || itunes.explicit,
+      trackNumber: enriched.trackNumber ?? itunes.trackNumber,
+      discNumber: enriched.discNumber ?? itunes.discNumber,
+    };
+  }
+
+  return enriched;
+}
+
+async function enrichMetadataTracks(tracks: TrackInfo[]): Promise<TrackInfo[]> {
+  const enriched: TrackInfo[] = [];
+
+  for (let batchStart = 0; batchStart < tracks.length; batchStart += 5) {
+    const batch = tracks.slice(batchStart, batchStart + 5);
+    const resolved = await Promise.all(batch.map((track) => enrichMetadataTrack(track)));
+    enriched.push(...resolved);
+  }
+
+  return enriched;
 }
 
 export async function POST(request: NextRequest) {
@@ -33,9 +187,9 @@ export async function POST(request: NextRequest) {
 
     const source = getRequestSource(request);
     const body = await request.json();
-    const { url, pow } = body;
+    const { url, pow, fullMetadata } = body;
 
-    // Verify proof-of-work
+    // Proof-of-work is optional here: the site sends it, but public API callers can omit it.
     if (pow && !verifyProofOfWork(pow)) {
       return NextResponse.json({ error: "verification failed — please try again" }, { status: 403 });
     }
@@ -48,11 +202,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "URL is required" }, { status: 400 });
     }
 
+    const cacheKey = `${normalizeMetadataCacheKey(url)}::full=${fullMetadata === true ? "1" : "0"}`;
+
     // Check cache
-    const cached = getCached(url);
+    const cached = getCachedMetadata(cacheKey);
     if (cached) {
-      console.log("[metadata] cache hit:", cached.artist, "-", cached.name);
-      return NextResponse.json({ type: "track", ...cached });
+      return NextResponse.json(cached);
     }
 
     const platform = detectPlatform(url);
@@ -68,43 +223,79 @@ export async function POST(request: NextRequest) {
     if (platform === "spotify") {
       const urlType = detectUrlType(url);
 
+      // Prefer the internal Spotify unfurl path first. The branches below are only fallback
+      // paths when unfurl cannot resolve the URL.
+      const unfurled = await getSpotifyFromUrl(url, { enrichIsrc: false });
+      if (unfurled) {
+        const mapped = mapUnfurlToMetadata(unfurled);
+        if (mapped.type === "track" && mapped.track) {
+          const baseTrack = fullMetadata ? await enrichMetadataTrack(mapped.track) : mapped.track;
+          const enriched = await enrichWithVideoCover(baseTrack);
+          const response = { type: "track", ...enriched };
+          setCachedMetadata(cacheKey, response);
+          return NextResponse.json(response);
+        }
+        if (mapped.type === "playlist") {
+          const playlist = fullMetadata
+            ? { ...mapped.playlist, tracks: await enrichMetadataTracks(mapped.playlist.tracks) }
+            : mapped.playlist;
+          const response = { type: "playlist", ...playlist };
+          setCachedMetadata(cacheKey, response);
+          return NextResponse.json(response);
+        }
+      }
+
       if (urlType === "playlist") {
         try {
           const playlist = await getPlaylistInfo(url);
-          return NextResponse.json({ type: "playlist", ...playlist });
+          const response = { type: "playlist", ...playlist };
+          setCachedMetadata(cacheKey, response);
+          return NextResponse.json(response);
         } catch (e) {
           console.log("[metadata] Spotify playlist API failed:", e instanceof Error ? e.message : e);
-          // Fallback: scrape the embed page
           const scraped = await resolvePlaylist(url);
           if (scraped) {
-            return NextResponse.json({ type: "playlist", ...scraped });
+            const response = { type: "playlist", ...scraped };
+            setCachedMetadata(cacheKey, response);
+            return NextResponse.json(response);
           }
-          return NextResponse.json({ error: "couldn't load playlist — try again later" }, { status: 503 });
+          return NextResponse.json({ error: "couldn't load playlist right now" }, { status: 503 });
         }
       }
 
       if (urlType === "album") {
         try {
           const album = await getAlbumInfo(url);
-          return NextResponse.json({ type: "playlist", ...album });
+          const response = { type: "playlist", ...album };
+          setCachedMetadata(cacheKey, response);
+          return NextResponse.json(response);
         } catch (e) {
           console.log("[metadata] Spotify album API failed:", e instanceof Error ? e.message : e);
           const scraped = await resolveAlbum(url);
           if (scraped) {
-            return NextResponse.json({ type: "playlist", ...scraped });
+            const response = { type: "playlist", ...scraped };
+            setCachedMetadata(cacheKey, response);
+            return NextResponse.json(response);
           }
-          return NextResponse.json({ error: "couldn't load album — try again later" }, { status: 503 });
+          return NextResponse.json({ error: "couldn't load album right now" }, { status: 503 });
         }
       }
 
       if (urlType === "artist") {
         try {
           const artist = await getArtistTopTracks(url);
-          return NextResponse.json({ type: "playlist", ...artist });
+          const response = { type: "playlist", ...artist };
+          setCachedMetadata(cacheKey, response);
+          return NextResponse.json(response);
         } catch (e) {
           console.log("[metadata] Spotify artist API failed:", e instanceof Error ? e.message : e);
-          // No embed scraping fallback for artist pages
-          return NextResponse.json({ error: "couldn't load artist — Spotify API requires premium" }, { status: 503 });
+          const scraped = await resolveArtist(url);
+          if (scraped) {
+            const response = { type: "playlist", ...scraped };
+            setCachedMetadata(cacheKey, response);
+            return NextResponse.json(response);
+          }
+          return NextResponse.json({ error: "couldn't load artist right now" }, { status: 503 });
         }
       }
 
@@ -120,13 +311,14 @@ export async function POST(request: NextRequest) {
     const result = await resolveTrack(url);
     if (result) {
       const enriched = await enrichWithVideoCover(result.track);
-      setCache(url, enriched);
       const extra: Record<string, string> = {};
       if (result.youtubeVideoId) {
         extra._youtubeId = result.youtubeVideoId;
         extra._originalPlatform = "youtube";
       }
-      return NextResponse.json({ type: "track", ...enriched, ...extra });
+      const response = { type: "track", ...enriched, ...extra };
+      setCachedMetadata(cacheKey, response);
+      return NextResponse.json(response);
     }
 
     return NextResponse.json(

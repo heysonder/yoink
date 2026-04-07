@@ -14,7 +14,7 @@ import { incrementDownloads } from "@/lib/counter";
 import { setExplicitTag } from "@/lib/mp4-advisory";
 import { ffmpegSemaphore } from "@/lib/semaphore";
 import { setCatalogIds } from "@/lib/mp4-catalog";
-import { resolvePlaylist, resolveAlbum, resolveSpotifyTrack, searchDeezerStructured } from "@/lib/resolve-track";
+import { resolvePlaylist, resolveAlbum, resolveArtist, resolveSpotifyTrack, searchDeezerStructured } from "@/lib/resolve-track";
 import { getRequestSource } from "@/lib/request-source";
 import { getClientIp, getRequestLogId, summarizeUrlForLogs } from "@/lib/request-privacy";
 
@@ -272,7 +272,7 @@ export async function POST(request: NextRequest) {
     } else if (urlType === "artist") {
       try { playlist = await getArtistTopTracks(url); } catch (e) {
         console.log("[playlist-dl] artist API failed:", e instanceof Error ? e.message : e);
-        // No embed fallback for artists
+        playlist = await resolveArtist(url);
       }
     } else {
       try { playlist = await getPlaylistInfo(url); } catch (e) {
@@ -282,7 +282,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!playlist) {
-      return NextResponse.json({ error: "couldn't load this — Spotify API may require premium" }, { status: 503 });
+      return NextResponse.json({ error: "couldn't load this right now" }, { status: 503 });
     }
     // Enrich embed-scraped tracks (no ISRC/albumArt) with Deezer/iTunes metadata
     // Only needed when tracks came from embed scraping (no ISRC = not from Spotify API)
@@ -419,7 +419,7 @@ export async function POST(request: NextRequest) {
         }
 
         const zipBuffer = zipSync(zipEntries, { level: 0 });
-        const zipFilename = sanitizeFilename(playlist.name) + ".zip";
+        const zipFilename = sanitizeFilename(`${playlist.name} · yoink`) + ".zip";
 
         incrementDownloads(usedNames.size).catch(() => {});
 
