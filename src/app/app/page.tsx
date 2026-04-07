@@ -38,11 +38,6 @@ interface QualityInfo {
 
 type AppState = "idle" | "thinking" | "fetching" | "ready" | "downloading" | "done" | "error";
 
-function shouldRequestFullMetadata(url: string): boolean {
-  void url;
-  return true;
-}
-
 export default function Home() {
   const [state, setState] = useState<AppState>("idle");
   const [track, setTrack] = useState<TrackInfo | null>(null);
@@ -103,7 +98,7 @@ export default function Home() {
         body: JSON.stringify({
           url,
           pow: powSolution,
-          fullMetadata: shouldRequestFullMetadata(url),
+          fullMetadata: true,
         }),
       });
 

@@ -260,6 +260,7 @@ interface SpotifyInternalCollectionData {
   totalTracks: number;
   releaseDate: string | null;
   tracks: SpotifyFromUrlTrack[];
+  entity: Record<string, unknown> | null;
 }
 
 function parseSpotifyMetaTags(html: string): SpotifyPageMetadata {
@@ -611,6 +612,7 @@ async function fetchSpotifyInternalCollectionData(
       totalTracks: 1,
       releaseDate: track.release_date,
       tracks: [track],
+      entity: session.entity,
     };
   }
 
@@ -637,7 +639,7 @@ async function fetchSpotifyInternalCollectionData(
         },
       );
       const playlistV2 = data?.data?.playlistV2;
-      if (!playlistV2) return tracks.length ? { name, owner, images, totalTracks: totalTracks || tracks.length, releaseDate: null, tracks } : null;
+      if (!playlistV2) return tracks.length ? { name, owner, images, totalTracks: totalTracks || tracks.length, releaseDate: null, tracks, entity: session.entity } : null;
 
       if (offset === 0) {
         name = typeof playlistV2.name === "string" ? normalizeSpotifyText(playlistV2.name) : name;
@@ -664,7 +666,7 @@ async function fetchSpotifyInternalCollectionData(
       offset += items.length;
     }
 
-    return tracks.length ? { name, owner, images, totalTracks: totalTracks || tracks.length, releaseDate: null, tracks } : null;
+    return tracks.length ? { name, owner, images, totalTracks: totalTracks || tracks.length, releaseDate: null, tracks, entity: session.entity } : null;
   }
 
   if (type === "album") {
@@ -690,7 +692,7 @@ async function fetchSpotifyInternalCollectionData(
         },
       );
       const albumUnion = data?.data?.albumUnion;
-      if (!albumUnion) return tracks.length ? { name, owner, images, totalTracks: totalTracks || tracks.length, releaseDate, tracks } : null;
+      if (!albumUnion) return tracks.length ? { name, owner, images, totalTracks: totalTracks || tracks.length, releaseDate, tracks, entity: session.entity } : null;
 
       if (offset === 0) {
         name = typeof albumUnion.name === "string" ? normalizeSpotifyText(albumUnion.name) : name;
@@ -718,7 +720,7 @@ async function fetchSpotifyInternalCollectionData(
       offset += items.length;
     }
 
-    return tracks.length ? { name, owner, images, totalTracks: totalTracks || tracks.length, releaseDate, tracks } : null;
+    return tracks.length ? { name, owner, images, totalTracks: totalTracks || tracks.length, releaseDate, tracks, entity: session.entity } : null;
   }
 
   const data = await fetchSpotifyPathfinder<{ data?: { artistUnion?: Record<string, unknown> } }>(
@@ -748,7 +750,7 @@ async function fetchSpotifyInternalCollectionData(
     })
     .filter((track): track is SpotifyFromUrlTrack => track !== null);
 
-  return tracks.length ? { name, owner: name, images, totalTracks: tracks.length, releaseDate: null, tracks } : null;
+  return tracks.length ? { name, owner: name, images, totalTracks: tracks.length, releaseDate: null, tracks, entity: session.entity } : null;
 }
 
 async function fetchSpotifyEmbedEntity(type: "track" | "playlist" | "album" | "artist", id: string): Promise<Record<string, unknown> | null> {
@@ -803,7 +805,7 @@ function mapSpotifyEmbedTrack(
     discNumber: null,
     label: null,
     copyright: null,
-    totalTracks: collectionType === "album" ? null : null,
+    totalTracks: null,
   };
 }
 
@@ -1428,10 +1430,7 @@ export async function getSpotifyFromUrl(url: string, options?: SpotifyFromUrlOpt
     const rawTrack = internal?.tracks[0] || await getSpotifyTrackPayload(trackId);
     if (!rawTrack) return null;
 
-    const baseTrack = internal && !enrichIsrc
-      ? rawTrack
-      : ((await getSpotifyTrackPayload(trackId, rawTrack)) || rawTrack);
-    const track = enrichIsrc ? await enrichTrackWithIsrc(baseTrack) : baseTrack;
+    const track = enrichIsrc ? await enrichTrackWithIsrc(rawTrack) : rawTrack;
 
     const images = internal?.images?.length
       ? internal.images
@@ -1463,11 +1462,11 @@ export async function getSpotifyFromUrl(url: string, options?: SpotifyFromUrlOpt
     : extractArtistId(url);
   if (!id) return null;
 
-  const [internal, entity, meta] = await Promise.all([
+  const [internal, meta] = await Promise.all([
     fetchSpotifyInternalCollectionData(urlType, id),
-    fetchSpotifyEmbedEntity(urlType, id),
     fetchSpotifyPageMetadata(urlType, id),
   ]);
+  const entity = internal?.entity || null;
   if (!internal && !entity) return null;
 
   const collectionName = internal?.name || (entity && typeof entity.name === "string" ? normalizeSpotifyText(entity.name) : "Spotify");
