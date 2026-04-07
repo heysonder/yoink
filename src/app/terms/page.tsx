@@ -23,6 +23,13 @@ const sections: Section[] = [
     ],
   },
   {
+    title: "use license",
+    content: [
+      "yoink grants you a limited, non-exclusive, non-transferable license to use the service for personal, non-commercial purposes only. this is a license to use, not a transfer of ownership.",
+      "under this license, you may not: redistribute, resell, or sublicense any content obtained through yoink; use yoink to build or supply a competing service or bulk download operation; or remove, alter, or obscure any metadata, copyright notices, or attribution embedded in downloaded files.",
+    ],
+  },
+  {
     title: "no guarantees",
     content: [
       "yoink is provided \"as is\" with no warranties of any kind. we don't guarantee uptime, audio quality, metadata accuracy, or that any specific track will be available.",
