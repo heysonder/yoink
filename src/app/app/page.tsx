@@ -10,7 +10,6 @@ import { unpackEnvelope } from "@/lib/client/envelope";
 import { encodeInBrowser, canUseClientFFmpeg, type FFmpegStatus } from "@/lib/client/ffmpeg-bridge";
 import { zipSync } from "fflate";
 import Spinner from "@/components/Spinner";
-import Turnstile from "@/components/Turnstile";
 
 interface TrackInfo {
   name: string;
@@ -55,7 +54,6 @@ export default function Home() {
   const [syncedLyrics, setSyncedLyrics] = useState(false);
   const abortRef = useRef(false);
   const downloadTriggeredRef = useRef(false);
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   // Enter key triggers download when track/playlist is ready
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -90,7 +88,7 @@ export default function Home() {
       const res = await fetch("/api/metadata", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, turnstileToken }),
+        body: JSON.stringify({ url }),
       });
 
       if (!res.ok) {
@@ -614,10 +612,6 @@ export default function Home() {
                 </span>
               </div>
             </div>
-            <Turnstile
-              onToken={setTurnstileToken}
-              onExpire={() => setTurnstileToken(null)}
-            />
           </div>
 
           {/* Loading */}
