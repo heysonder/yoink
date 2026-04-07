@@ -1,4 +1,4 @@
-FROM node:22-slim AS base
+FROM node:24-slim AS base
 
 RUN apt-get update && apt-get install -y ffmpeg curl python3 python3-pip && rm -rf /var/lib/apt/lists/* \
     && pip3 install --break-system-packages yt-dlp
