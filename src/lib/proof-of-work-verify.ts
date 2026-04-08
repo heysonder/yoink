@@ -9,6 +9,7 @@ interface PowSolution {
 
 const DIFFICULTY = 16;
 const MAX_AGE_MS = 60_000; // challenge must be solved within 60s
+const MAX_CLOCK_SKEW_MS = 30_000; // tolerate up to 30s of client clock drift
 
 // Track used challenges to prevent replay
 const usedChallenges = new Set<string>();
@@ -21,7 +22,7 @@ setInterval(() => {
 export function verifyProofOfWork(solution: PowSolution): boolean {
   // Check age
   const age = Date.now() - solution.timestamp;
-  if (age > MAX_AGE_MS || age < -5_000) {
+  if (age > MAX_AGE_MS || age < -MAX_CLOCK_SKEW_MS) {
     console.log("[pow] rejected: age", age, "ms");
     return false;
   }
