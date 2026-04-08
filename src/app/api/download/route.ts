@@ -23,6 +23,7 @@ import { incrementDownloads } from "@/lib/counter";
 import { resolveTrack } from "@/lib/resolve-track";
 import { getRequestSource } from "@/lib/request-source";
 import { getClientIp, getRequestLogId, summarizeUrlForLogs } from "@/lib/request-privacy";
+import { verifyProofOfWork } from "@/lib/proof-of-work-verify";
 
 const execFileAsync = promisify(execFile);
 
@@ -64,6 +65,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    const { pow } = body;
+    if (pow && !verifyProofOfWork(pow)) {
+      return NextResponse.json({ error: "verification failed — please try again" }, { status: 403 });
+    }
     const url = body.url;
     const requestedFormat = body.format as string | undefined; // "mp3" | "flac" | "alac"
     const genreSource = body.genreSource as string | undefined;

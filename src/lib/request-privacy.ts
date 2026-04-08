@@ -2,8 +2,8 @@ import { randomBytes } from "crypto";
 import type { NextRequest } from "next/server";
 
 export function getClientIp(request: NextRequest): string {
-  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    || request.headers.get("cf-connecting-ip")
+  return request.headers.get("cf-connecting-ip")
+    || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
     || "unknown";
 }
 

@@ -17,6 +17,7 @@ import { setCatalogIds } from "@/lib/mp4-catalog";
 import { resolvePlaylist, resolveAlbum, resolveArtist, resolveSpotifyTrack, searchDeezerStructured } from "@/lib/resolve-track";
 import { getRequestSource } from "@/lib/request-source";
 import { getClientIp, getRequestLogId, summarizeUrlForLogs } from "@/lib/request-privacy";
+import { verifyProofOfWork } from "@/lib/proof-of-work-verify";
 
 const execFileAsync = promisify(execFile);
 
@@ -248,7 +249,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { url, format: requestedFormat, genreSource, syncedLyrics } = body;
+    const { url, format: requestedFormat, genreSource, syncedLyrics, pow } = body;
+    if (pow && !verifyProofOfWork(pow)) {
+      return NextResponse.json({ error: "verification failed — please try again" }, { status: 403 });
+    }
 
     console.log(
       `[playlist-dl] [${source}] ${logId} → ${summarizeUrlForLogs(url)}${requestedFormat ? ` (${requestedFormat})` : ""}`

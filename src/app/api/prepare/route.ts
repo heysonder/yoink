@@ -8,6 +8,7 @@ import { resolveTrack, getCached } from "@/lib/resolve-track";
 import { getRequestSource } from "@/lib/request-source";
 import { buildEnvelopeMetadata, packEnvelope } from "@/lib/envelope";
 import { getClientIp, getRequestLogId, summarizeUrlForLogs } from "@/lib/request-privacy";
+import { verifyProofOfWork } from "@/lib/proof-of-work-verify";
 
 const ALLOWED_ART_HOSTS = [
   "i.scdn.co",
@@ -46,6 +47,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    const { pow } = body;
+    if (pow && !verifyProofOfWork(pow)) {
+      return NextResponse.json({ error: "verification failed — please try again" }, { status: 403 });
+    }
     const url = body.url;
     const requestedFormat = body.format as string | undefined;
     const genreSource = body.genreSource as string | undefined;
