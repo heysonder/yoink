@@ -111,14 +111,7 @@ export default function LegalPage() {
         <span>yoink</span>
         <div className="flex items-center gap-3 sm:gap-4">
           <Link href="/extras" className="hover:text-text transition-colors duration-200">extras</Link>
-          <a
-            href="https://github.com/heysonder/yoink"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-text transition-colors duration-200"
-          >
-            source
-          </a>
+          <Link href="/source" className="hover:text-text transition-colors duration-200">source</Link>
         </div>
       </footer>
     </div>

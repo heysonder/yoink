@@ -240,7 +240,7 @@ export default function RulesPage() {
             contact
           </a>
           <a
-            href="https://github.com/heysonder/yoink"
+            href="https://github.com/yoinkify/yoink"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-text transition-colors duration-200"

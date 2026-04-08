@@ -15,7 +15,7 @@ export default function Header() {
         <Link href="/feedback" className="text-surface2 hover:text-lavender transition-colors duration-200">feedback</Link>
         <span className="text-surface0/60">/</span>
         <a
-          href="https://github.com/heysonder/yoink"
+          href="https://github.com/yoinkify/yoink"
           target="_blank"
           rel="noopener noreferrer"
           className="text-surface2 hover:text-lavender transition-colors duration-200 animate-text-shimmer-silver"

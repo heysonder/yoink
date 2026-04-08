@@ -197,7 +197,7 @@ export default function LandingPage() {
             drop a star on github — it helps more than you&apos;d think.
           </p>
           <a
-            href="https://github.com/heysonder/yoink"
+            href="https://github.com/yoinkify/yoink"
             target="_blank"
             rel="noopener noreferrer"
             className="btn-press inline-block text-sm text-crust bg-lavender hover:bg-mauve px-8 py-3.5 rounded-lg font-bold uppercase tracking-wider transition-colors duration-200"
@@ -238,14 +238,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-3 sm:gap-4">
             <Link href="/extras" className="hover:text-text transition-colors duration-200">extras</Link>
             <Link href="/legal" className="hover:text-text transition-colors duration-200">legal</Link>
-            <a
-              href="https://github.com/heysonder/yoink"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-text transition-colors duration-200"
-            >
-              source
-            </a>
+            <Link href="/source" className="hover:text-text transition-colors duration-200">source</Link>
           </div>
         </div>
         <div className="space-y-3 text-[10px] text-overlay0/40 leading-relaxed">
