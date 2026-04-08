@@ -1571,7 +1571,36 @@ export async function resolveTrack(url: string): Promise<{ track: TrackInfo; pla
     youtubeVideoId = vid;
     track = await resolveYouTubeTrack(vid, url);
   } else {
-    track = await resolveSpotifyTrack(url);
+    // Prefer unfurl pipeline — uses Spotify internal endpoints, no API key / rate limit issues
+    const unfurled = await getSpotifyFromUrl(url, { enrichIsrc: true });
+    if (unfurled?.tracks[0]) {
+      const t = unfurled.tracks[0];
+      const artist = t.artists.join(", ");
+      const albumArtist = t.album_artists?.length ? t.album_artists.join(", ") : null;
+      track = {
+        name: t.name,
+        artist,
+        albumArtist,
+        album: t.album,
+        albumArt: t.image?.url || t.thumb_image?.url || "",
+        duration: `${Math.floor(t.duration_ms / 60000)}:${Math.floor((t.duration_ms % 60000) / 1000).toString().padStart(2, "0")}`,
+        durationMs: t.duration_ms,
+        isrc: t.external_ids?.isrc || null,
+        genre: null,
+        releaseDate: t.release_date || null,
+        spotifyUrl: t.external_url || url,
+        explicit: t.explicit,
+        trackNumber: t.track_number,
+        discNumber: t.disc_number,
+        totalTracks: t.total_tracks ?? null,
+        label: null,
+        copyright: t.copyright || null,
+      };
+    }
+    // Fall back to old resolve chain if unfurl fails
+    if (!track) {
+      track = await resolveSpotifyTrack(url);
+    }
   }
 
   if (!track) return null;
