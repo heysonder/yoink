@@ -7,6 +7,7 @@ import Header from "@/components/Header";
 import SpotifyInput from "@/components/SpotifyInput";
 import FormatToggle, { type Format } from "@/components/FormatToggle";
 import MigrationBanner from "@/components/MigrationBanner";
+import NoticeBanner from "@/components/NoticeBanner";
 import { unpackEnvelope } from "@/lib/client/envelope";
 import { encodeInBrowser, canUseClientFFmpeg, type FFmpegStatus } from "@/lib/client/ffmpeg-bridge";
 import { zipSync } from "fflate";
@@ -559,6 +560,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-grid">
       <MigrationBanner />
+      <NoticeBanner />
       <Header />
 
       <main className="flex-1 flex flex-col items-center justify-center px-6 py-12">
