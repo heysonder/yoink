@@ -43,6 +43,11 @@ export default function LandingPage() {
         </Link>
       </nav>
 
+      {/* SEO — visually hidden, crawlable by Google and screen readers */}
+      <div className="sr-only">
+        <p>yoink is a free spotify downloader that lets you download songs, playlists, albums, and artists from spotify, apple music, and youtube links. download music in lossless flac, alac, or 320kbps mp3 with full metadata, album art, and synced lyrics. no account required, no ads, completely free.</p>
+      </div>
+
       {/* Hero */}
       <section className="px-6 pt-20 sm:pt-32 pb-16 sm:pb-24 max-w-2xl mx-auto">
         <div className="space-y-6 animate-fade-in-up" style={{ opacity: 0 }}>
@@ -56,7 +61,7 @@ export default function LandingPage() {
             <span className="logo-expand" style={{ animationDelay: "0.5s" }}>n</span>
             <span className="text-lavender">k</span>
           </h1>
-          <p className="text-lg text-subtext0/80 leading-relaxed max-w-md">
+          <h2 className="text-lg text-subtext0/80 leading-relaxed max-w-md font-normal">
             paste a track, album, or playlist link. get the file in{" "}
             <span
               className={`text-lavender font-bold transition-all duration-300 ease-out origin-center ${
@@ -74,7 +79,7 @@ export default function LandingPage() {
               {formats[formatIndex]}
             </span>
             . metadata, lyrics, cover art. no accounts, no ads.
-          </p>
+          </h2>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 pt-2">
             <Link
               href="/app"

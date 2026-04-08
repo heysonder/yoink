@@ -572,10 +572,10 @@ export default function Home() {
               <span className="logo-expand" style={{ animationDelay: "0.5s" }}>n</span>
               <span className="text-lavender">k</span>
             </h1>
-            <p className="text-sm text-subtext0/80 leading-relaxed max-w-sm">
+            <h2 className="text-sm text-subtext0/80 leading-relaxed max-w-sm font-normal">
               paste a spotify link. get the {format}.<br />
               tracks, playlists, albums. metadata included.
-            </p>
+            </h2>
           </div>
 
           {/* Input + Format Toggle */}
