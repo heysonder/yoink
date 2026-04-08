@@ -48,6 +48,9 @@ docs/superpowers/
 # download counter
 .download-count
 
+# worktrees
+.worktrees/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
