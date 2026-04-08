@@ -5,8 +5,9 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
     NPM_CONFIG_FUND=false \
     NPM_CONFIG_AUDIT=false
 
+COPY requirements.txt /tmp/requirements.txt
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg curl python3 python3-pip && rm -rf /var/lib/apt/lists/* \
-    && pip3 install --no-cache-dir --break-system-packages yt-dlp
+    && pip3 install --no-cache-dir --break-system-packages -r /tmp/requirements.txt && rm /tmp/requirements.txt
 
 FROM base AS deps
 WORKDIR /app

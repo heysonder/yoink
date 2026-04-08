@@ -42,6 +42,21 @@ const nextConfig: NextConfig = {
             value: "max-age=31536000; includeSubDomains",
           },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: https://i.scdn.co https://image-cdn-ak.spotifycdn.com https://image-cdn-fa.spotifycdn.com https://*.mzstatic.com https://cdns-images.dzcdn.net https://e-cdns-images.dzcdn.net",
+              "font-src 'self'",
+              "connect-src 'self'",
+              "frame-src https://challenges.cloudflare.com",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+            ].join("; "),
+          },
         ],
       },
       {

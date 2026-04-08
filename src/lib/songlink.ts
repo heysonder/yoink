@@ -58,7 +58,8 @@ export async function resolveToSpotify(
   }
 }
 
-// In-memory cache with 1-hour TTL
+// In-memory cache with 1-hour TTL (max 500 entries)
+const SONGLINK_CACHE_MAX = 500;
 const cache = new Map<string, { result: SonglinkResult; expiresAt: number }>();
 
 // Minimum gap between requests (7s)
@@ -126,6 +127,12 @@ export async function resolveSonglink(
     }
 
     const result: SonglinkResult = { deezerId, tidalId };
+
+    // Evict oldest entry if at capacity
+    if (cache.size >= SONGLINK_CACHE_MAX) {
+      const oldestKey = cache.keys().next().value;
+      if (oldestKey) cache.delete(oldestKey);
+    }
 
     // Cache for 1 hour
     cache.set(spotifyUrl, {

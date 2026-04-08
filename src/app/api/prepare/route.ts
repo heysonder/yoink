@@ -24,7 +24,7 @@ const ALLOWED_ART_HOSTS = [
 function isAllowedUrl(url: string, allowedHosts: string[]): boolean {
   try {
     const parsed = new URL(url);
-    return allowedHosts.some((host) => parsed.hostname.endsWith(host));
+    return allowedHosts.some((host) => parsed.hostname === host || parsed.hostname.endsWith("." + host));
   } catch {
     return false;
   }
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { pow } = body;
-    if (pow && !verifyProofOfWork(pow)) {
+    if (!pow || !verifyProofOfWork(pow)) {
       return NextResponse.json({ error: "verification failed — please try again" }, { status: 403 });
     }
     const url = body.url;

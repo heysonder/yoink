@@ -142,7 +142,7 @@ async function tryYouTube(track: TrackInfo): Promise<AudioResult> {
 
     const parsed = new URL(audioUrl);
     const allowed = ALLOWED_AUDIO_HOSTS.some((host) =>
-      parsed.hostname.endsWith(host)
+      parsed.hostname === host || parsed.hostname.endsWith("." + host)
     );
     if (!allowed) throw new Error("not allowed host");
 

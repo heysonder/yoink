@@ -343,8 +343,7 @@ export async function POST(request: NextRequest) {
       { status: 404 }
     );
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to fetch info";
-    return NextResponse.json({ error: message, requestId: logId }, { status: 500 });
+    console.error(`[metadata] ${logId} error:`, error);
+    return NextResponse.json({ error: "failed to fetch info — please try again" }, { status: 500 });
   }
 }

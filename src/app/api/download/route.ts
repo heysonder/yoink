@@ -32,7 +32,7 @@ export const maxDuration = 120;
 function isAllowedUrl(url: string, allowedHosts: string[]): boolean {
   try {
     const parsed = new URL(url);
-    return allowedHosts.some((host) => parsed.hostname.endsWith(host));
+    return allowedHosts.some((host) => parsed.hostname === host || parsed.hostname.endsWith("." + host));
   } catch {
     return false;
   }
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { pow } = body;
-    if (pow && !verifyProofOfWork(pow)) {
+    if (!pow || !verifyProofOfWork(pow)) {
       return NextResponse.json({ error: "verification failed — please try again" }, { status: 403 });
     }
     const url = body.url;
@@ -342,8 +342,8 @@ export async function POST(request: NextRequest) {
     incrementDownloads().catch(() => {});
     return new NextResponse(new Uint8Array(finalBuffer), { headers: responseHeaders });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Download failed";
-    return NextResponse.json({ error: message, requestId: logId }, { status: 500 });
+    console.error(`[download] ${logId} error:`, error);
+    return NextResponse.json({ error: "download failed — please try again" }, { status: 500 });
   } finally {
     if (tempDir) {
       try {
