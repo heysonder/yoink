@@ -50,7 +50,7 @@ export default function SpotifyInput({ onSubmit, disabled, clear }: SpotifyInput
           onChange={(e) => setUrl(e.target.value)}
           disabled={disabled}
           placeholder="https://open.spotify.com/track or playlist..."
-          className="flex-1 min-w-0 bg-transparent px-4 py-3.5 text-sm text-text placeholder:text-overlay0/60 outline-none font-mono disabled:opacity-50"
+          className="flex-1 min-w-0 bg-transparent px-4 py-3.5 text-base sm:text-sm text-text placeholder:text-overlay0/60 outline-none font-mono disabled:opacity-50"
         />
         <button
           type="button"
