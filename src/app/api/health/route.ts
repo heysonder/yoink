@@ -66,12 +66,23 @@ export async function GET() {
     }),
 
     check("tidal", async () => {
-      if (!process.env.TIDAL_ACCESS_TOKEN && !process.env.TIDAL_REFRESH_TOKEN) return false;
-      // Just check the auth endpoint is reachable — actual token refresh happens at download time
-      const res = await fetch("https://api.tidal.com/v1/search?query=test&types=TRACKS&limit=1&countryCode=US", {
-        headers: {
-          "x-tidal-token": process.env.TIDAL_CLIENT_ID || "CzET4vdadNUFQ5JU",
-        },
+      const refreshToken = process.env.TIDAL_REFRESH_TOKEN;
+      const clientId = process.env.TIDAL_CLIENT_ID;
+      if (!refreshToken || !clientId) {
+        // No refresh flow configured — just check if a static token exists
+        return !!process.env.TIDAL_ACCESS_TOKEN;
+      }
+      const params: Record<string, string> = {
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
+        client_id: clientId,
+        scope: "r_usr w_usr",
+      };
+      if (process.env.TIDAL_CLIENT_SECRET) params.client_secret = process.env.TIDAL_CLIENT_SECRET;
+      const res = await fetch("https://auth.tidal.com/v1/oauth2/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams(params),
         signal: AbortSignal.timeout(5000),
       });
       return res.ok;
