@@ -29,7 +29,7 @@ export default function NoticeBanner() {
             notice
           </span>
           <p className="text-xs text-subtext0/90 leading-relaxed">
-            <span className="text-text/80 font-medium">some downloads may have had incorrect metadata recently</span>
+            <span className="text-text/80 font-medium">some downloads may have matched the wrong song recently</span>
             <span className="hidden sm:inline">
               {" "}&mdash; this has been fixed. sorry about that.
             </span>
