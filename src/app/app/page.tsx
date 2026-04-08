@@ -239,8 +239,8 @@ export default function Home() {
       setQuality(result);
       setState("done");
       setTimeout(() => setState("ready"), 3000);
-    } else {
-      setError("Download failed");
+    } else if (!error) {
+      setError("couldn't download this track — try again or try a different link");
       setState("error");
     }
   };
@@ -673,12 +673,12 @@ export default function Home() {
                 >
                   try again
                 </button>
-                <a
-                  href="mailto:me@yoinkify.com"
+                <Link
+                  href="/feedback"
                   className="text-xs text-overlay0/50 hover:text-overlay0 transition-colors"
                 >
                   report bug
-                </a>
+                </Link>
               </div>
             </div>
           )}
