@@ -66,10 +66,12 @@ export async function GET() {
     }),
 
     check("tidal", async () => {
-      const token = process.env.TIDAL_ACCESS_TOKEN;
-      if (!token) return false;
-      const res = await fetch("https://api.tidal.com/v1/tracks/77646169?countryCode=US", {
-        headers: { Authorization: `Bearer ${token}` },
+      if (!process.env.TIDAL_ACCESS_TOKEN && !process.env.TIDAL_REFRESH_TOKEN) return false;
+      // Just check the auth endpoint is reachable — actual token refresh happens at download time
+      const res = await fetch("https://api.tidal.com/v1/search?query=test&types=TRACKS&limit=1&countryCode=US", {
+        headers: {
+          "x-tidal-token": process.env.TIDAL_CLIENT_ID || "CzET4vdadNUFQ5JU",
+        },
         signal: AbortSignal.timeout(5000),
       });
       return res.ok;
