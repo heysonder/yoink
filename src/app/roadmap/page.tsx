@@ -121,6 +121,42 @@ const items: RoadmapItem[] = [
     tag: "metadata",
   },
   {
+    title: "client-side encoding",
+    description: "ffmpeg runs in your browser via webassembly. audio conversion happens locally — faster downloads, less server load.",
+    status: "shipped",
+    tag: "audio",
+  },
+  {
+    title: "proof-of-work verification",
+    description: "lightweight browser-based challenge replaces captchas. no third-party scripts, no tracking, no annoying checkboxes.",
+    status: "shipped",
+    tag: "core",
+  },
+  {
+    title: "link previews",
+    description: "spotify unfurl metadata pipeline — paste a yoink link anywhere and get a rich preview with album art, track info, and branding.",
+    status: "shipped",
+    tag: "ux",
+  },
+  {
+    title: "tidal rate limit handling",
+    description: "global throttling and random delays between requests to prevent source bans during playlist downloads.",
+    status: "shipped",
+    tag: "audio",
+  },
+  {
+    title: "security hardening",
+    description: "ip spoofing protection, proof-of-work on all routes, health endpoint redaction, error boundaries, and security headers.",
+    status: "shipped",
+    tag: "core",
+  },
+  {
+    title: "uptime monitoring",
+    description: "live uptime percentage on the status page, powered by external monitoring with automatic health checks.",
+    status: "shipped",
+    tag: "core",
+  },
+  {
     title: "additional link resolvers",
     description: "odesli and isrc-based fallbacks for cross-platform link resolution when direct matching fails.",
     status: "planned",

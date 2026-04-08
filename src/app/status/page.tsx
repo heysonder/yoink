@@ -119,8 +119,14 @@ export default function StatusPage() {
         </div>
       </section>
 
+      {/* Separator */}
+      <div className="max-w-2xl mx-auto px-6 pt-12 sm:pt-16">
+        <div className="border-t border-surface0/40" />
+        <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-overlay0/40 pt-4">updates</p>
+      </div>
+
       {/* Content */}
-      <article className="px-6 pt-16 sm:pt-20 pb-16 sm:pb-24 max-w-2xl mx-auto">
+      <article className="px-6 pt-8 sm:pt-10 pb-16 sm:pb-24 max-w-2xl mx-auto">
         <div className="space-y-12 animate-fade-in-up" style={{ opacity: 0, animationDelay: "100ms" }}>
           {/* Header */}
           <div className="space-y-6">
