@@ -34,16 +34,23 @@ function formatUptime(seconds: number): string {
   return `${mins}m`;
 }
 
+
 export default function StatusPage() {
   const [health, setHealth] = useState<HealthData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [uptimePct, setUptimePct] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/health")
       .then((r) => r.json())
       .then((d) => { setHealth(d); setLoading(false); })
       .catch(() => { setError(true); setLoading(false); });
+
+    fetch("/api/uptime")
+      .then((r) => r.json())
+      .then((d) => { if (d.percentage != null) setUptimePct(d.percentage); })
+      .catch(() => {});
   }, []);
 
   const allOk = health?.checks.every((c) => c.ok);
@@ -85,7 +92,7 @@ export default function StatusPage() {
             </div>
             {health && (
               <span className="text-[10px] text-overlay0/60">
-                up {formatUptime(health.uptime)} &middot; {health.latency}
+                {uptimePct && <>{uptimePct}% &middot; </>}up {formatUptime(health.uptime)} &middot; {health.latency}
               </span>
             )}
           </div>
