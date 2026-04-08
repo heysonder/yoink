@@ -21,9 +21,13 @@ const serviceLabels: Record<string, string> = {
   ffmpeg: "ffmpeg",
   lrclib: "lyrics",
   itunes: "itunes api",
-  deezer: "deezer api",
+  deezer: "deezer",
+  tidal: "tidal",
+  piped: "youtube (piped)",
   curl: "networking",
 };
+
+const audioSources = ["deezer", "tidal", "piped"];
 
 function formatUptime(seconds: number): string {
   const days = Math.floor(seconds / 86400);
@@ -53,7 +57,11 @@ export default function StatusPage() {
       .catch(() => {});
   }, []);
 
+  const coreChecks = health?.checks.filter((c) => !audioSources.includes(c.name));
+  const sourceChecks = health?.checks.filter((c) => audioSources.includes(c.name));
   const allOk = health?.checks.every((c) => c.ok);
+  const sourcesUp = sourceChecks?.filter((c) => c.ok).length ?? 0;
+  const sourcesTotal = sourceChecks?.length ?? 0;
 
   return (
     <div className="min-h-screen bg-grid">
@@ -98,15 +106,40 @@ export default function StatusPage() {
           </div>
 
           {health && (
-            <div className="px-5 py-3 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2.5">
-              {health.checks.map((c) => (
-                <div key={c.name} className="flex items-center gap-2">
-                  <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${c.ok ? "bg-green" : "bg-red"}`} />
-                  <span className={`text-[11px] ${c.ok ? "text-subtext0/70" : "text-red/80"}`}>
-                    {serviceLabels[c.name] || c.name}
+            <div className="divide-y divide-surface0/30">
+              {/* Core services */}
+              <div className="px-5 py-3 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2.5">
+                {coreChecks?.map((c) => (
+                  <div key={c.name} className="flex items-center gap-2">
+                    <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${c.ok ? "bg-green" : "bg-red"}`} />
+                    <span className={`text-[11px] ${c.ok ? "text-subtext0/70" : "text-red/80"}`}>
+                      {serviceLabels[c.name] || c.name}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Audio sources */}
+              <div className="px-5 py-3">
+                <div className="flex items-center gap-2 mb-2.5">
+                  <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                    sourcesUp === sourcesTotal ? "bg-green" : sourcesUp === 0 ? "bg-red" : "bg-peach"
+                  }`} />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-overlay0/60">
+                    download sources
                   </span>
                 </div>
-              ))}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2.5">
+                  {sourceChecks?.map((c) => (
+                    <div key={c.name} className="flex items-center gap-2">
+                      <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${c.ok ? "bg-green" : "bg-red"}`} />
+                      <span className={`text-[11px] ${c.ok ? "text-subtext0/70" : "text-red/80"}`}>
+                        {serviceLabels[c.name] || c.name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 

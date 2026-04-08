@@ -64,6 +64,24 @@ export async function GET() {
       });
       return res.ok;
     }),
+
+    check("tidal", async () => {
+      const token = process.env.TIDAL_ACCESS_TOKEN;
+      if (!token) return false;
+      const res = await fetch("https://api.tidal.com/v1/tracks/77646169?countryCode=US", {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(5000),
+      });
+      return res.ok;
+    }),
+
+    check("piped", async () => {
+      const baseUrl = process.env.PIPED_API_URL || "https://pipedapi.kavin.rocks";
+      const res = await fetch(`${baseUrl}/trending?region=US`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      return res.ok;
+    }),
   ]);
 
   const env = {
