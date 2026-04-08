@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "music players — yoink",
+  title: "best music players for flac, alac & mp3",
   description:
-    "best music players for flac, alac, and mp3 files on mac, windows, ios, and android. plays your yoink downloads with full metadata and lyrics.",
+    "best music players for flac, alac, and mp3 files on mac, windows, ios, and android. plays downloaded music with full metadata, album art, and synced lyrics.",
   alternates: { canonical: "/players" },
 };
 

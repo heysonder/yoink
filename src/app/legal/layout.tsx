@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "legal — yoink",
+  title: "legal",
   description:
     "terms of service, privacy policy, and plain-english rules for using yoink.",
   alternates: { canonical: "/legal" },
