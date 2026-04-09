@@ -128,6 +128,8 @@ export default function Home() {
   const downloadTrack = useCallback(async (trackInfo: TrackInfo): Promise<QualityInfo | false> => {
     const trackUrl = trackInfo.spotifyUrl || originalUrl;
     const useClient = canUseClientFFmpeg();
+    const challenge = generateChallenge(16);
+    const pow = await solveChallenge(challenge);
 
     if (useClient) {
       try {
@@ -135,7 +137,7 @@ export default function Home() {
         const res = await fetch("/api/prepare", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: trackUrl, format, genreSource, syncedLyrics }),
+          body: JSON.stringify({ url: trackUrl, format, genreSource, syncedLyrics, pow }),
         });
 
         if (!res.ok) {
@@ -196,7 +198,7 @@ export default function Home() {
       const res = await fetch("/api/download", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: trackUrl, format, genreSource, syncedLyrics }),
+        body: JSON.stringify({ url: trackUrl, format, genreSource, syncedLyrics, pow }),
       });
 
       if (!res.ok) {
@@ -252,13 +254,15 @@ export default function Home() {
     setTrackStatuses(new Array(playlist.tracks.length).fill("pending"));
 
     const useClient = canUseClientFFmpeg();
+    const challenge = generateChallenge(16);
+    const pow = await solveChallenge(challenge);
 
     if (useClient) {
       try {
         const res = await fetch("/api/prepare-playlist", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: originalUrl, format, genreSource, syncedLyrics }),
+          body: JSON.stringify({ url: originalUrl, format, genreSource, syncedLyrics, pow }),
         });
 
         if (!res.ok) {
@@ -300,7 +304,7 @@ export default function Home() {
               const fallbackRes = await fetch("/api/download", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ url: trackUrl, format, genreSource, syncedLyrics }),
+                body: JSON.stringify({ url: trackUrl, format, genreSource, syncedLyrics, pow }),
               });
               if (fallbackRes.ok) {
                 const audioFormat = fallbackRes.headers.get("X-Audio-Format") || "mp3";
@@ -438,7 +442,7 @@ export default function Home() {
       const res = await fetch("/api/download-playlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: originalUrl, format, genreSource, syncedLyrics }),
+        body: JSON.stringify({ url: originalUrl, format, genreSource, syncedLyrics, pow }),
       });
 
       if (!res.ok) {
