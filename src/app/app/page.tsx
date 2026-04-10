@@ -11,7 +11,7 @@ import NoticeBanner from "@/components/NoticeBanner";
 import { unpackEnvelope } from "@/lib/client/envelope";
 import { encodeInBrowser, canUseClientFFmpeg, type FFmpegStatus } from "@/lib/client/ffmpeg-bridge";
 import { zipSync } from "fflate";
-import { generateChallenge, solveChallenge } from "@/lib/proof-of-work";
+import { createProofOfWorkSolution } from "@/lib/proof-of-work";
 
 interface TrackInfo {
   name: string;
@@ -88,8 +88,7 @@ export default function Home() {
 
     try {
       // Proof-of-work challenge
-      const challenge = generateChallenge(16);
-      const powSolution = await solveChallenge(challenge);
+      const powSolution = await createProofOfWorkSolution(16);
 
       setState("fetching");
 
@@ -128,8 +127,7 @@ export default function Home() {
   const downloadTrack = useCallback(async (trackInfo: TrackInfo): Promise<QualityInfo | false> => {
     const trackUrl = trackInfo.spotifyUrl || originalUrl;
     const useClient = canUseClientFFmpeg();
-    const challenge = generateChallenge(16);
-    const pow = await solveChallenge(challenge);
+    const pow = await createProofOfWorkSolution(16);
 
     if (useClient) {
       try {
@@ -254,8 +252,7 @@ export default function Home() {
     setTrackStatuses(new Array(playlist.tracks.length).fill("pending"));
 
     const useClient = canUseClientFFmpeg();
-    const challenge = generateChallenge(16);
-    const pow = await solveChallenge(challenge);
+    const pow = await createProofOfWorkSolution(16);
 
     if (useClient) {
       try {

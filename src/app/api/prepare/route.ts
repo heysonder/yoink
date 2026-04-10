@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { pow } = body;
-    if (!pow || !verifyProofOfWork(pow)) {
+    if (pow && !verifyProofOfWork(pow)) {
       return NextResponse.json({ error: "verification failed — please try again" }, { status: 403 });
     }
     const url = body.url;

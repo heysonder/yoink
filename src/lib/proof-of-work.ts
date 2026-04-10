@@ -16,10 +16,19 @@ export interface PowSolution {
   timestamp: number;
 }
 
+export function supportsProofOfWork(): boolean {
+  return typeof globalThis.crypto?.getRandomValues === "function"
+    && typeof globalThis.crypto?.subtle?.digest === "function";
+}
+
 export async function solveChallenge(
   challenge: PowChallenge,
   onProgress?: (attempts: number) => void
 ): Promise<PowSolution> {
+  if (!supportsProofOfWork()) {
+    throw new Error("proof-of-work is not supported in this browser");
+  }
+
   const encoder = new TextEncoder();
   let nonce = 0;
   const target = challenge.difficulty;
@@ -71,6 +80,10 @@ function hasLeadingZeroBits(hash: Uint8Array, bits: number): boolean {
 }
 
 export function generateChallenge(difficulty = 16): PowChallenge {
+  if (!supportsProofOfWork()) {
+    throw new Error("proof-of-work is not supported in this browser");
+  }
+
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
   const challenge = Array.from(bytes)
@@ -82,4 +95,9 @@ export function generateChallenge(difficulty = 16): PowChallenge {
     difficulty,
     timestamp: Date.now(),
   };
+}
+
+export async function createProofOfWorkSolution(difficulty = 16): Promise<PowSolution | null> {
+  if (!supportsProofOfWork()) return null;
+  return solveChallenge(generateChallenge(difficulty));
 }
