@@ -65,10 +65,11 @@ yoink will be running on `http://localhost:3000`.
 ```bash
 git clone https://github.com/heysonder/yoink.git
 cd yoink
-npm install
+corepack enable
+pnpm install
 cp .env.example .env.local
 # fill in your env vars (see below)
-npm run dev
+pnpm dev
 ```
 
 requires [ffmpeg](https://ffmpeg.org/download.html) installed locally.

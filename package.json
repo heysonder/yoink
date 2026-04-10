@@ -2,6 +2,7 @@
   "name": "downloader",
   "version": "3.0.0",
   "private": true,
+  "packageManager": "pnpm@10.29.1",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

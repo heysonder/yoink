@@ -7,10 +7,11 @@ PRs are welcome. if you have a bug report or feature request, the fastest way to
 ```bash
 git clone https://github.com/heysonder/yoink.git
 cd yoink
-npm install
+corepack enable
+pnpm install
 cp .env.example .env.local
 # fill in your env vars (see README)
-npm run dev
+pnpm dev
 ```
 
 requires [ffmpeg](https://ffmpeg.org/download.html) installed locally.
