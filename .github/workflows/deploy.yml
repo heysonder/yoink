@@ -90,7 +90,7 @@ jobs:
           git pull origin main
           gunzip -c /tmp/yoink-image.tar.gz | docker load
           rm -f /tmp/yoink-image.tar.gz
-          docker compose up -d --no-build --remove-orphans
+          docker compose up -d --no-build --force-recreate --remove-orphans
 
           echo "waiting for health check..."
           for i in $(seq 1 12); do
