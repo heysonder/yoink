@@ -8,7 +8,47 @@ permissions:
   contents: read
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.29.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run lint
+        run: pnpm lint
+
+      - name: Run build
+        run: pnpm build
+
+      - name: Run unit tests
+        run: pnpm test:unit
+
+      - name: Install Playwright browser
+        run: pnpm test:browsers
+
+      - name: Run smoke tests
+        run: pnpm exec playwright test
+
   deploy:
+    needs: validate
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
     env:
@@ -55,7 +95,15 @@ jobs:
               git pull origin main &&
               docker load < /tmp/yoink-image.tar.gz &&
               rm -f /tmp/yoink-image.tar.gz &&
-              docker compose up -d --no-build --remove-orphans
+              docker compose up -d --no-build --remove-orphans &&
+              for check in 1 2 3 4 5 6 7 8 9 10 11 12; do
+                if curl -fsS http://127.0.0.1:3000/api/health > /tmp/yoink-health.json; then
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "app failed health check after deploy" >&2
+              exit 1
             '; then
               exit 0
             fi
@@ -70,3 +118,38 @@ jobs:
           exit 1
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
+
+      - name: Fetch post-deploy health
+        run: |
+          ssh \
+            -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=30 \
+            root@"$VPS_HOST" 'curl -fsS http://127.0.0.1:3000/api/health' > health.json
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+
+      - name: Summarize provider health
+        run: |
+          node <<'EOF'
+          const fs = require('fs');
+          const health = JSON.parse(fs.readFileSync('health.json', 'utf8'));
+          const checks = new Map((health.checks || []).map((check) => [check.name, check.ok]));
+          const summary = [
+            ['app', health.status === 'ok'],
+            ['spotify', checks.get('spotify') === true],
+            ['youtube/piped', checks.get('piped') === true],
+            ['tidal', checks.get('tidal') === true],
+            ['deezer', checks.get('deezer') === true],
+            ['ffmpeg', checks.get('ffmpeg') === true],
+          ];
+          const failing = summary.filter(([, ok]) => !ok).map(([name]) => name);
+          const lines = [
+            '## Post-deploy health',
+            ...summary.map(([name, ok]) => `- ${name}: ${ok ? 'ok' : 'degraded'}`),
+          ];
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
+          if (failing.length > 0) {
+            console.log(`::warning title=Post-deploy health degraded::${failing.join(', ')}`);
+          }
+          EOF
