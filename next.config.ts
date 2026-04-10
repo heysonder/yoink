@@ -4,6 +4,9 @@ const isProduction = process.env.NODE_ENV === "production";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  outputFileTracingExcludes: {
+    "*": ["tests/**", "playwright.config.ts", "vitest.config.ts"],
+  },
   images: {
     remotePatterns: [
       {
