@@ -15,7 +15,7 @@ jobs:
       NEXT_TELEMETRY_DISABLED: 1
     steps:
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v5
@@ -46,7 +46,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Blacksmith Builder
         uses: useblacksmith/setup-docker-builder@v1
