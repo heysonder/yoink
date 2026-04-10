@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "fs/promises";
 import { join } from "path";
 
-const COUNTER_FILE = join(process.cwd(), ".download-count");
+const COUNTER_FILE = join(/* turbopackIgnore: true */ process.cwd(), ".download-count");
 
 let count: number | null = null;
 let dirty = false;

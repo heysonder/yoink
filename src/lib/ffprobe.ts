@@ -25,7 +25,7 @@ export async function analyzeAudio(
   buffer: Buffer,
   format: string
 ): Promise<AudioQualityInfo | null> {
-  const tempPath = join(tmpdir(), `probe-${Date.now()}-${Math.random().toString(36).slice(2)}.${format}`);
+  const tempPath = join(/* turbopackIgnore: true */ tmpdir(), `probe-${Date.now()}-${Math.random().toString(36).slice(2)}.${format}`);
 
   try {
     await writeFile(tempPath, buffer);
@@ -84,7 +84,7 @@ export async function analyzeAudio(
     return null;
   } finally {
     try {
-      await unlink(tempPath);
+      await unlink(/* turbopackIgnore: true */ tempPath);
     } catch {
       // best effort cleanup
     }

@@ -14,40 +14,18 @@ import { tmpdir } from "os";
 import { detectPlatform } from "@/lib/spotify";
 import { setExplicitTag } from "@/lib/mp4-advisory";
 import { ffmpegSemaphore } from "@/lib/semaphore";
-import { lookupItunesGenre, lookupItunesCatalogIds } from "@/lib/itunes";
 import { setCatalogIds } from "@/lib/mp4-catalog";
-import { fetchBestAudio } from "@/lib/audio-sources";
-import { fetchLyrics } from "@/lib/lyrics";
 import { rateLimit } from "@/lib/ratelimit";
 import { incrementDownloads } from "@/lib/counter";
 import { resolveTrack } from "@/lib/resolve-track";
 import { getRequestSource } from "@/lib/request-source";
 import { getClientIp, getRequestLogId, summarizeUrlForLogs } from "@/lib/request-privacy";
 import { verifyProofOfWork } from "@/lib/proof-of-work-verify";
+import { prepareTrackAssets } from "@/lib/track-prep";
 
 const execFileAsync = promisify(execFile);
 
 export const maxDuration = 120;
-
-function isAllowedUrl(url: string, allowedHosts: string[]): boolean {
-  try {
-    const parsed = new URL(url);
-    return allowedHosts.some((host) => parsed.hostname === host || parsed.hostname.endsWith("." + host));
-  } catch {
-    return false;
-  }
-}
-
-const ALLOWED_ART_HOSTS = [
-  "i.scdn.co",
-  "mosaic.scdn.co",
-  "image-cdn-ak.spotifycdn.com",
-  "image-cdn-fa.spotifycdn.com",
-  "mzstatic.com",
-  "resources.tidal.com",
-  "e-cdns-images.dzcdn.net",
-  "cdns-images.dzcdn.net",
-];
 
 export async function POST(request: NextRequest) {
   let tempDir: string | null = null;
@@ -104,19 +82,13 @@ export async function POST(request: NextRequest) {
     }
     const track = resolved.track;
 
-    // Override genre with iTunes if requested
-    if (genreSource === "itunes") {
-      const itunesGenre = await lookupItunesGenre(track);
-      if (itunesGenre) track.genre = itunesGenre;
-    }
-
     // Step 2: Fetch best audio + lyrics + iTunes catalog IDs in parallel
-    const [audio, lyrics, catalogIds] = await Promise.all([
-      fetchBestAudio(track, preferLossless),
-      fetchLyrics(track.artist, track.name),
-      lookupItunesCatalogIds(track),
-    ]);
-    console.log(`[lyrics] ${track.artist} - ${track.name}: ${lyrics ? `found (${lyrics.length} chars)` : "not found"}`);
+    const { audio, artBuffer, catalogIds, embeddedLyrics } = await prepareTrackAssets(track, {
+      requestedFormat,
+      genreSource,
+      syncedLyrics,
+    });
+    console.log(`[lyrics] ${track.artist} - ${track.name}: ${embeddedLyrics ? `found (${embeddedLyrics.length} chars)` : "not found"}`);
     if (catalogIds) console.log(`[itunes] matched: cnID=${catalogIds.trackId} plID=${catalogIds.collectionId}`);
 
     // Step 3: Embed metadata using ffmpeg
@@ -124,7 +96,7 @@ export async function POST(request: NextRequest) {
     const canLossless = preferLossless && (audio.source === "deezer" || audio.source === "tidal") && audio.format === "flac";
     const wantAlac = canLossless && requestedFormat === "alac";
     const wantFlac = canLossless && requestedFormat === "flac";
-    tempDir = await mkdtemp(join(tmpdir(), "dl-"));
+    tempDir = await mkdtemp(join(/* turbopackIgnore: true */ tmpdir(), "dl-"));
     const inputExt = audio.format === "webm" ? "webm" : audio.format === "flac" ? "flac" : "mp3";
     const inputPath = join(tempDir, `input.${inputExt}`);
     const outputExt = wantAlac ? "m4a" : wantFlac ? "flac" : "mp3";
@@ -135,14 +107,10 @@ export async function POST(request: NextRequest) {
 
     // Download album art (validate URL host)
     let hasArt = false;
-    if (track.albumArt && isAllowedUrl(track.albumArt, ALLOWED_ART_HOSTS)) {
+    if (artBuffer) {
       try {
-        const artRes = await fetch(track.albumArt);
-        if (artRes.ok) {
-          const artBuffer = Buffer.from(await artRes.arrayBuffer());
-          await writeFile(artPath, artBuffer);
-          hasArt = true;
-        }
+        await writeFile(artPath, artBuffer);
+        hasArt = true;
       } catch {
         // Skip album art on failure
       }
@@ -234,8 +202,7 @@ export async function POST(request: NextRequest) {
     if (track.copyright) {
       ffmpegArgs.push("-metadata", `copyright=${track.copyright}`);
     }
-    if (lyrics) {
-      const embeddedLyrics = syncedLyrics ? lyrics : lyrics.replace(/^\[[\d:.]+\]\s*/gm, "").trim();
+    if (embeddedLyrics) {
       ffmpegArgs.push("-metadata", `lyrics=${embeddedLyrics}`);
     }
     if (wantAlac || wantFlac) {
@@ -308,7 +275,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const outputBuffer = await readFile(outputPath);
+    const outputBuffer = await readFile(/* turbopackIgnore: true */ outputPath);
     let finalBuffer: Buffer = outputBuffer;
     if (outputExt === "m4a") {
       if (track.explicit) finalBuffer = setExplicitTag(finalBuffer);
@@ -347,7 +314,7 @@ export async function POST(request: NextRequest) {
   } finally {
     if (tempDir) {
       try {
-        const files = await readdir(tempDir);
+        const files = await readdir(/* turbopackIgnore: true */ tempDir);
         await Promise.all(files.map((f) => unlink(join(tempDir!, f))));
         await rmdir(tempDir);
       } catch {

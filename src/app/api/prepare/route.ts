@@ -1,34 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { detectPlatform } from "@/lib/spotify";
-import { lookupItunesGenre, lookupItunesCatalogIds } from "@/lib/itunes";
-import { fetchBestAudio } from "@/lib/audio-sources";
-import { fetchLyrics } from "@/lib/lyrics";
 import { rateLimit } from "@/lib/ratelimit";
 import { resolveTrack, getCached } from "@/lib/resolve-track";
 import { getRequestSource } from "@/lib/request-source";
 import { buildEnvelopeMetadata, packEnvelope } from "@/lib/envelope";
 import { getClientIp, getRequestLogId, summarizeUrlForLogs } from "@/lib/request-privacy";
 import { verifyProofOfWork } from "@/lib/proof-of-work-verify";
-
-const ALLOWED_ART_HOSTS = [
-  "i.scdn.co",
-  "mosaic.scdn.co",
-  "image-cdn-ak.spotifycdn.com",
-  "image-cdn-fa.spotifycdn.com",
-  "mzstatic.com",
-  "resources.tidal.com",
-  "e-cdns-images.dzcdn.net",
-  "cdns-images.dzcdn.net",
-];
-
-function isAllowedUrl(url: string, allowedHosts: string[]): boolean {
-  try {
-    const parsed = new URL(url);
-    return allowedHosts.some((host) => parsed.hostname === host || parsed.hostname.endsWith("." + host));
-  } catch {
-    return false;
-  }
-}
+import { prepareTrackAssets } from "@/lib/track-prep";
 
 export const maxDuration = 120;
 
@@ -55,7 +33,6 @@ export async function POST(request: NextRequest) {
     const requestedFormat = body.format as string | undefined;
     const genreSource = body.genreSource as string | undefined;
     const syncedLyrics = body.syncedLyrics === true;
-    const preferLossless = requestedFormat === "flac" || requestedFormat === "alac";
 
     if (!url || typeof url !== "string") {
       return NextResponse.json({ error: "URL is required" }, { status: 400 });
@@ -89,34 +66,13 @@ export async function POST(request: NextRequest) {
       track = resolved.track;
     }
 
-    if (genreSource === "itunes") {
-      const itunesGenre = await lookupItunesGenre(track);
-      if (itunesGenre) track.genre = itunesGenre;
-    }
+    const { audio, artBuffer, catalogIds, embeddedLyrics } = await prepareTrackAssets(track, {
+      requestedFormat,
+      genreSource,
+      syncedLyrics,
+    });
 
-    const [audio, lyrics, catalogIds] = await Promise.all([
-      fetchBestAudio(track, preferLossless),
-      fetchLyrics(track.artist, track.name),
-      lookupItunesCatalogIds(track),
-    ]);
-
-    let artBuffer: Buffer | null = null;
-    if (track.albumArt && isAllowedUrl(track.albumArt, ALLOWED_ART_HOSTS)) {
-      try {
-        const artRes = await fetch(track.albumArt);
-        if (artRes.ok) {
-          artBuffer = Buffer.from(await artRes.arrayBuffer());
-        }
-      } catch {
-        // Skip album art on failure
-      }
-    }
-
-    const plainLyrics = lyrics
-      ? (syncedLyrics ? lyrics : lyrics.replace(/^\[[\d:.]+\]\s*/gm, "").trim())
-      : null;
-
-    const metadata = buildEnvelopeMetadata(track, audio, plainLyrics, catalogIds);
+    const metadata = buildEnvelopeMetadata(track, audio, embeddedLyrics, catalogIds);
     const envelope = packEnvelope(metadata, audio.buffer, artBuffer);
 
     return new NextResponse(new Uint8Array(envelope), {

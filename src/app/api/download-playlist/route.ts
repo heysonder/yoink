@@ -5,43 +5,21 @@ import { readFile, writeFile, unlink, mkdtemp, rmdir, readdir } from "fs/promise
 import { join } from "path";
 import { tmpdir } from "os";
 import { zipSync } from "fflate";
-import { getPlaylistInfo, getAlbumInfo, getArtistTopTracks, detectUrlType, type TrackInfo, type PlaylistInfo } from "@/lib/spotify";
-import { lookupItunesGenre, lookupItunesCatalogIds } from "@/lib/itunes";
-import { fetchBestAudio } from "@/lib/audio-sources";
-import { fetchLyrics } from "@/lib/lyrics";
+import type { TrackInfo } from "@/lib/spotify";
 import { rateLimit } from "@/lib/ratelimit";
 import { incrementDownloads } from "@/lib/counter";
 import { setExplicitTag } from "@/lib/mp4-advisory";
 import { ffmpegSemaphore } from "@/lib/semaphore";
 import { setCatalogIds } from "@/lib/mp4-catalog";
-import { resolvePlaylist, resolveAlbum, resolveArtist, resolveSpotifyTrack, searchDeezerStructured } from "@/lib/resolve-track";
 import { getRequestSource } from "@/lib/request-source";
 import { getClientIp, getRequestLogId, summarizeUrlForLogs } from "@/lib/request-privacy";
 import { verifyProofOfWork } from "@/lib/proof-of-work-verify";
+import { enrichPlaylistTracks, loadPlaylistWithFallback } from "@/lib/playlist-workflow";
+import { prepareTrackAssets } from "@/lib/track-prep";
 
 const execFileAsync = promisify(execFile);
 
 export const maxDuration = 300;
-
-const ALLOWED_ART_HOSTS = [
-  "i.scdn.co",
-  "mosaic.scdn.co",
-  "image-cdn-ak.spotifycdn.com",
-  "image-cdn-fa.spotifycdn.com",
-  "mzstatic.com",
-  "resources.tidal.com",
-  "e-cdns-images.dzcdn.net",
-  "cdns-images.dzcdn.net",
-];
-
-function isAllowedUrl(url: string, allowedHosts: string[]): boolean {
-  try {
-    const parsed = new URL(url);
-    return allowedHosts.some((host) => parsed.hostname.endsWith(host));
-  } catch {
-    return false;
-  }
-}
 
 async function processTrack(
   track: TrackInfo,
@@ -50,25 +28,18 @@ async function processTrack(
   syncedLyrics?: boolean,
 ): Promise<{ filename: string; buffer: Buffer }> {
   const preferLossless = requestedFormat === "flac" || requestedFormat === "alac";
-
-  // Override genre with iTunes if requested
-  if (genreSource === "itunes") {
-    const itunesGenre = await lookupItunesGenre(track);
-    if (itunesGenre) track.genre = itunesGenre;
-  }
-
-  const [audio, lyrics, catalogIds] = await Promise.all([
-    fetchBestAudio(track, preferLossless),
-    fetchLyrics(track.artist, track.name),
-    lookupItunesCatalogIds(track),
-  ]);
+  const { audio, artBuffer, catalogIds, embeddedLyrics } = await prepareTrackAssets(track, {
+    requestedFormat,
+    genreSource,
+    syncedLyrics,
+  });
 
   // Only allow lossless output if source audio is actually lossless (FLAC from Deezer or Tidal)
   const canLossless = preferLossless && (audio.source === "deezer" || audio.source === "tidal") && audio.format === "flac";
   const wantAlac = canLossless && requestedFormat === "alac";
   const wantFlac = canLossless && requestedFormat === "flac";
 
-  const tempDir = await mkdtemp(join(tmpdir(), "dl-"));
+  const tempDir = await mkdtemp(join(/* turbopackIgnore: true */ tmpdir(), "dl-"));
   try {
     const inputExt = audio.format === "webm" ? "webm" : audio.format === "flac" ? "flac" : "mp3";
     const inputPath = join(tempDir, `input.${inputExt}`);
@@ -79,14 +50,10 @@ async function processTrack(
     await writeFile(inputPath, audio.buffer);
 
     let hasArt = false;
-    if (track.albumArt && isAllowedUrl(track.albumArt, ALLOWED_ART_HOSTS)) {
+    if (artBuffer) {
       try {
-        const artRes = await fetch(track.albumArt);
-        if (artRes.ok) {
-          const artBuffer = Buffer.from(await artRes.arrayBuffer());
-          await writeFile(artPath, artBuffer);
-          hasArt = true;
-        }
+        await writeFile(artPath, artBuffer);
+        hasArt = true;
       } catch {
         // Skip album art on failure
       }
@@ -173,8 +140,7 @@ async function processTrack(
     if (track.copyright) {
       ffmpegArgs.push("-metadata", `copyright=${track.copyright}`);
     }
-    if (lyrics) {
-      const embeddedLyrics = syncedLyrics ? lyrics : lyrics.replace(/^\[[\d:.]+\]\s*/gm, "").trim();
+    if (embeddedLyrics) {
       ffmpegArgs.push("-metadata", `lyrics=${embeddedLyrics}`);
     }
     if (wantAlac || wantFlac) {
@@ -211,7 +177,7 @@ async function processTrack(
       }
     }
 
-    const outputBuffer = await readFile(outputPath);
+    const outputBuffer = await readFile(/* turbopackIgnore: true */ outputPath);
     let finalBuffer: Buffer = outputBuffer;
     if (outputExt === "m4a") {
       if (track.explicit) finalBuffer = setExplicitTag(finalBuffer);
@@ -221,7 +187,7 @@ async function processTrack(
     return { filename, buffer: finalBuffer as Buffer };
   } finally {
     try {
-      const files = await readdir(tempDir);
+      const files = await readdir(/* turbopackIgnore: true */ tempDir);
       await Promise.all(files.map((f) => unlink(join(tempDir, f))));
       await rmdir(tempDir);
     } catch {
@@ -264,53 +230,13 @@ export async function POST(request: NextRequest) {
 
     const MAX_TRACKS = 200;
 
-    const urlType = detectUrlType(url);
-    let playlist: PlaylistInfo | null = null;
-
-    // Try Spotify API first, fall back to embed scraping
-    if (urlType === "album") {
-      try { playlist = await getAlbumInfo(url); } catch (e) {
-        console.log("[playlist-dl] album API failed:", e instanceof Error ? e.message : e);
-        playlist = await resolveAlbum(url);
-      }
-    } else if (urlType === "artist") {
-      try { playlist = await getArtistTopTracks(url); } catch (e) {
-        console.log("[playlist-dl] artist API failed:", e instanceof Error ? e.message : e);
-        playlist = await resolveArtist(url);
-      }
-    } else {
-      try { playlist = await getPlaylistInfo(url); } catch (e) {
-        console.log("[playlist-dl] playlist API failed:", e instanceof Error ? e.message : e);
-        playlist = await resolvePlaylist(url);
-      }
-    }
+    const playlist = await loadPlaylistWithFallback(url, "[playlist-dl]");
 
     if (!playlist) {
       return NextResponse.json({ error: "couldn't load this right now" }, { status: 503 });
     }
-    // Enrich embed-scraped tracks (no ISRC/albumArt) with Deezer/iTunes metadata
-    // Only needed when tracks came from embed scraping (no ISRC = not from Spotify API)
-    const needsEnrichment = playlist.tracks.some(t => !t.isrc && !t.albumArt);
-    if (needsEnrichment) {
-      console.log("[playlist-dl] enriching", playlist.tracks.length, "scraped tracks with metadata");
-      const enriched = await Promise.all(
-        playlist.tracks.map(async (track) => {
-          if (track.isrc && track.albumArt) return track; // already has full metadata
-          try {
-            // Try resolving via the single-track resolver (Deezer search by artist+title)
-            if (track.spotifyUrl) {
-              const resolved = await resolveSpotifyTrack(track.spotifyUrl);
-              if (resolved) return { ...resolved, spotifyUrl: track.spotifyUrl };
-            }
-            // Fallback: Deezer structured search (with album context for disambiguation)
-            const dz = await searchDeezerStructured(track.name, track.artist, track.album || null);
-            if (dz) return { ...dz, spotifyUrl: track.spotifyUrl };
-          } catch { /* keep original */ }
-          return track;
-        })
-      );
-      playlist.tracks = enriched;
-    }
+
+    playlist.tracks = await enrichPlaylistTracks(playlist.tracks, "[playlist-dl]");
 
     if (!playlist.tracks.length) {
       return NextResponse.json({ error: "Playlist has no tracks" }, { status: 400 });

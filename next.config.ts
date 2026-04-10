@@ -4,14 +4,21 @@ const isProduction = process.env.NODE_ENV === "production";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  turbopack: {
+    root: __dirname,
+  },
   outputFileTracingExcludes: {
-    "*": ["tests/**", "playwright.config.ts", "vitest.config.ts"],
+    "*": ["tests/**", "playwright.config.ts", "vitest.config.ts", "next.config.ts"],
   },
   images: {
     remotePatterns: [
       {
         protocol: "https",
         hostname: "i.scdn.co",
+      },
+      {
+        protocol: "https",
+        hostname: "mosaic.scdn.co",
       },
       {
         protocol: "https",
@@ -53,7 +60,7 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               `script-src 'self' 'unsafe-inline'${isProduction ? "" : " 'unsafe-eval'"} https://challenges.cloudflare.com`,
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: https://i.scdn.co https://image-cdn-ak.spotifycdn.com https://image-cdn-fa.spotifycdn.com https://*.mzstatic.com https://cdns-images.dzcdn.net https://e-cdns-images.dzcdn.net",
+              "img-src 'self' data: https://i.scdn.co https://mosaic.scdn.co https://image-cdn-ak.spotifycdn.com https://image-cdn-fa.spotifycdn.com https://*.mzstatic.com https://cdns-images.dzcdn.net https://e-cdns-images.dzcdn.net",
               "font-src 'self'",
               "connect-src 'self'",
               "frame-src https://challenges.cloudflare.com",

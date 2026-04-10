@@ -1,36 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPlaylistInfo, getAlbumInfo, getArtistTopTracks, detectUrlType, type TrackInfo, type PlaylistInfo } from "@/lib/spotify";
-import { lookupItunesGenre, lookupItunesCatalogIds } from "@/lib/itunes";
-import { fetchBestAudio } from "@/lib/audio-sources";
-import { fetchLyrics } from "@/lib/lyrics";
+import type { TrackInfo } from "@/lib/spotify";
 import { rateLimit } from "@/lib/ratelimit";
-import { resolvePlaylist, resolveAlbum, resolveArtist, resolveSpotifyTrack, searchDeezerStructured } from "@/lib/resolve-track";
 import { getRequestSource } from "@/lib/request-source";
 import { buildEnvelopeMetadata, packEnvelope } from "@/lib/envelope";
 import { getClientIp, getRequestLogId, summarizeUrlForLogs } from "@/lib/request-privacy";
 import { verifyProofOfWork } from "@/lib/proof-of-work-verify";
+import { enrichPlaylistTracks, loadPlaylistWithFallback } from "@/lib/playlist-workflow";
+import { prepareTrackAssets } from "@/lib/track-prep";
 
 export const maxDuration = 300;
-
-const ALLOWED_ART_HOSTS = [
-  "i.scdn.co",
-  "mosaic.scdn.co",
-  "image-cdn-ak.spotifycdn.com",
-  "image-cdn-fa.spotifycdn.com",
-  "mzstatic.com",
-  "resources.tidal.com",
-  "e-cdns-images.dzcdn.net",
-  "cdns-images.dzcdn.net",
-];
-
-function isAllowedUrl(url: string, allowedHosts: string[]): boolean {
-  try {
-    const parsed = new URL(url);
-    return allowedHosts.some((host) => parsed.hostname.endsWith(host));
-  } catch {
-    return false;
-  }
-}
 
 async function prepareTrack(
   track: TrackInfo,
@@ -38,34 +16,13 @@ async function prepareTrack(
   genreSource?: string,
   syncedLyrics?: boolean,
 ): Promise<Buffer> {
-  const preferLossless = requestedFormat === "flac" || requestedFormat === "alac";
+  const { audio, artBuffer, catalogIds, embeddedLyrics } = await prepareTrackAssets(track, {
+    requestedFormat,
+    genreSource,
+    syncedLyrics,
+  });
 
-  if (genreSource === "itunes") {
-    const itunesGenre = await lookupItunesGenre(track);
-    if (itunesGenre) track.genre = itunesGenre;
-  }
-
-  const [audio, lyrics, catalogIds] = await Promise.all([
-    fetchBestAudio(track, preferLossless),
-    fetchLyrics(track.artist, track.name),
-    lookupItunesCatalogIds(track),
-  ]);
-
-  let artBuffer: Buffer | null = null;
-  if (track.albumArt && isAllowedUrl(track.albumArt, ALLOWED_ART_HOSTS)) {
-    try {
-      const artRes = await fetch(track.albumArt);
-      if (artRes.ok) {
-        artBuffer = Buffer.from(await artRes.arrayBuffer());
-      }
-    } catch {}
-  }
-
-  const plainLyrics = lyrics
-    ? (syncedLyrics ? lyrics : lyrics.replace(/^\[[\d:.]+\]\s*/gm, "").trim())
-    : null;
-
-  const metadata = buildEnvelopeMetadata(track, audio, plainLyrics, catalogIds);
+  const metadata = buildEnvelopeMetadata(track, audio, embeddedLyrics, catalogIds);
   return packEnvelope(metadata, audio.buffer, artBuffer);
 }
 
@@ -97,50 +54,13 @@ export async function POST(request: NextRequest) {
 
     const MAX_TRACKS = 200;
 
-    const urlType = detectUrlType(url);
-    let playlist: PlaylistInfo | null = null;
-
-    if (urlType === "album") {
-      try { playlist = await getAlbumInfo(url); } catch (e) {
-        console.log("[prepare-playlist] album API failed:", e instanceof Error ? e.message : e);
-        playlist = await resolveAlbum(url);
-      }
-    } else if (urlType === "artist") {
-      try { playlist = await getArtistTopTracks(url); } catch (e) {
-        console.log("[prepare-playlist] artist API failed:", e instanceof Error ? e.message : e);
-        playlist = await resolveArtist(url);
-      }
-    } else {
-      try { playlist = await getPlaylistInfo(url); } catch (e) {
-        console.log("[prepare-playlist] playlist API failed:", e instanceof Error ? e.message : e);
-        playlist = await resolvePlaylist(url);
-      }
-    }
+    const playlist = await loadPlaylistWithFallback(url, "[prepare-playlist]");
 
     if (!playlist) {
       return NextResponse.json({ error: "couldn't load this right now" }, { status: 503 });
     }
 
-    // Enrich embed-scraped tracks (no ISRC/albumArt) with Deezer/iTunes metadata
-    const needsEnrichment = playlist.tracks.some(t => !t.isrc && !t.albumArt);
-    if (needsEnrichment) {
-      console.log("[prepare-playlist] enriching", playlist.tracks.length, "scraped tracks with metadata");
-      const enriched = await Promise.all(
-        playlist.tracks.map(async (track) => {
-          if (track.isrc && track.albumArt) return track;
-          try {
-            if (track.spotifyUrl) {
-              const resolved = await resolveSpotifyTrack(track.spotifyUrl);
-              if (resolved) return { ...resolved, spotifyUrl: track.spotifyUrl };
-            }
-            const dz = await searchDeezerStructured(track.name, track.artist, track.album || null);
-            if (dz) return { ...dz, spotifyUrl: track.spotifyUrl };
-          } catch { /* keep original */ }
-          return track;
-        })
-      );
-      playlist.tracks = enriched;
-    }
+    playlist.tracks = await enrichPlaylistTracks(playlist.tracks, "[prepare-playlist]");
 
     if (!playlist.tracks.length) {
       return NextResponse.json({ error: "Playlist has no tracks" }, { status: 400 });

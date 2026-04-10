@@ -1,4 +1,7 @@
 import { execFile } from "child_process";
+import { readFile, unlink } from "fs/promises";
+import { tmpdir } from "os";
+import { join } from "path";
 import { promisify } from "util";
 import type { TrackInfo } from "./spotify";
 
@@ -198,11 +201,7 @@ async function pipedStreamUrl(videoId: string, apiUrl: string): Promise<string |
 
 // yt-dlp downloads the audio file directly (avoids 403s from googlevideo)
 export async function ytdlpDownload(videoId: string): Promise<{ buffer: Buffer; format: string } | null> {
-  const { join } = await import("path");
-  const { tmpdir } = await import("os");
-  const { readFile, unlink } = await import("fs/promises");
-
-  const tempPath = join(tmpdir(), `yt-dlp-${videoId}-${Date.now()}`);
+  const tempPath = join(/* turbopackIgnore: true */ tmpdir(), `yt-dlp-${videoId}-${Date.now()}`);
 
   try {
     const { stdout } = await execFileAsync(YT_DLP, [
@@ -217,12 +216,12 @@ export async function ytdlpDownload(videoId: string): Promise<{ buffer: Buffer; 
     const filePath = stdout.trim().split("\n").pop()?.trim();
     if (!filePath) return null;
 
-    const buffer = await readFile(filePath);
+    const buffer = await readFile(/* turbopackIgnore: true */ filePath);
     const ext = filePath.split(".").pop() || "webm";
     console.log("[youtube] yt-dlp downloaded:", ext, `(${(buffer.length / 1024 / 1024).toFixed(1)}MB)`);
 
     // Clean up temp file
-    try { await unlink(filePath); } catch {}
+    try { await unlink(/* turbopackIgnore: true */ filePath); } catch {}
 
     return { buffer, format: ext };
   } catch (e) {
