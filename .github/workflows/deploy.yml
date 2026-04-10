@@ -38,6 +38,9 @@ jobs:
       - name: Run build
         run: pnpm build
 
+      - name: Clean test files from standalone output
+        run: rm -rf .next/standalone/tests .next/standalone/playwright.config.ts .next/standalone/vitest.config.ts
+
       - name: Run unit tests
         run: pnpm test:unit
 
@@ -45,7 +48,7 @@ jobs:
         run: pnpm test:browsers
 
       - name: Run smoke tests
-        run: pnpm exec playwright test --config playwright.config.ts tests/e2e/
+        run: pnpm exec playwright test
 
   deploy:
     needs: validate
