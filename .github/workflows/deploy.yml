@@ -61,86 +61,73 @@ jobs:
       - name: Package image
         run: docker save yoink:latest | gzip -1 > yoink-image.tar.gz
 
-      - name: Setup SSH key
+      - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
+          cat >> ~/.ssh/config <<CFG
+          Host vps
+            HostName $VPS_HOST
+            User root
+            IdentityFile ~/.ssh/deploy_key
+            StrictHostKeyChecking accept-new
+            ConnectTimeout 30
+          CFG
         env:
           SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
 
-      - name: Deploy
+      - name: Upload image to VPS
+        run: scp yoink-image.tar.gz vps:/tmp/yoink-image.tar.gz
+
+      - name: Deploy on VPS
         run: |
-          for attempt in 1 2 3; do
-            if ssh \
-              -i ~/.ssh/deploy_key \
-              -o StrictHostKeyChecking=accept-new \
-              -o ConnectTimeout=30 \
-              root@"$VPS_HOST" 'cat > /tmp/yoink-image.tar.gz' < yoink-image.tar.gz && \
-              ssh \
-              -i ~/.ssh/deploy_key \
-              -o StrictHostKeyChecking=accept-new \
-              -o ConnectTimeout=30 \
-              root@"$VPS_HOST" '
-              cd /root/services/yoink &&
-              git pull origin main &&
-              docker load < /tmp/yoink-image.tar.gz &&
-              rm -f /tmp/yoink-image.tar.gz &&
-              docker compose up -d --no-build --remove-orphans &&
-              for check in 1 2 3 4 5 6 7 8 9 10 11 12; do
-                if curl -fsS http://127.0.0.1:3000/api/health > /tmp/yoink-health.json; then
-                  exit 0
-                fi
-                sleep 5
-              done
-              echo "app failed health check after deploy" >&2
-              exit 1
-            '; then
+          ssh vps bash <<'DEPLOY'
+          set -euo pipefail
+          cd /root/services/yoink
+          git pull origin main --quiet
+          docker load < /tmp/yoink-image.tar.gz
+          rm -f /tmp/yoink-image.tar.gz
+          docker compose up -d --no-build --remove-orphans
+
+          echo "waiting for health check..."
+          for i in $(seq 1 12); do
+            if curl -fsS http://127.0.0.1:3000/api/health > /dev/null 2>&1; then
+              echo "healthy after ${i}x5s"
               exit 0
             fi
-
-            if [ "$attempt" -lt 3 ]; then
-              echo "SSH deploy attempt $attempt failed, retrying in 15 seconds..."
-              sleep 15
-            fi
+            sleep 5
           done
-
-          echo "SSH deploy failed after 3 attempts"
+          echo "health check failed after 60s" >&2
           exit 1
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
+          DEPLOY
 
-      - name: Fetch post-deploy health
+      - name: Post-deploy health summary
+        if: always()
         run: |
-          ssh \
-            -i ~/.ssh/deploy_key \
-            -o StrictHostKeyChecking=accept-new \
-            -o ConnectTimeout=30 \
-            root@"$VPS_HOST" 'curl -fsS http://127.0.0.1:3000/api/health' > health.json
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
+          HEALTH=$(ssh vps 'curl -fsS http://127.0.0.1:3000/api/health' 2>/dev/null) || HEALTH=""
 
-      - name: Summarize provider health
-        run: |
-          node <<'EOF'
-          const fs = require('fs');
-          const health = JSON.parse(fs.readFileSync('health.json', 'utf8'));
-          const checks = new Map((health.checks || []).map((check) => [check.name, check.ok]));
-          const summary = [
-            ['app', health.status === 'ok'],
-            ['spotify', checks.get('spotify') === true],
-            ['youtube/piped', checks.get('piped') === true],
-            ['tidal', checks.get('tidal') === true],
-            ['deezer', checks.get('deezer') === true],
-            ['ffmpeg', checks.get('ffmpeg') === true],
-          ];
-          const failing = summary.filter(([, ok]) => !ok).map(([name]) => name);
-          const lines = [
-            '## Post-deploy health',
-            ...summary.map(([name, ok]) => `- ${name}: ${ok ? 'ok' : 'degraded'}`),
-          ];
-          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
-          if (failing.length > 0) {
-            console.log(`::warning title=Post-deploy health degraded::${failing.join(', ')}`);
-          }
-          EOF
+          if [ -z "$HEALTH" ]; then
+            echo "## Post-deploy health" >> "$GITHUB_STEP_SUMMARY"
+            echo "- app: unreachable" >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning title=Post-deploy health::Could not reach health endpoint"
+            exit 0
+          fi
+
+          node -e "
+            const health = JSON.parse(process.argv[1]);
+            const checks = new Map((health.checks || []).map(c => [c.name, c.ok]));
+            const items = [
+              ['app', health.status === 'ok'],
+              ['spotify', checks.get('spotify') === true],
+              ['youtube/piped', checks.get('piped') === true],
+              ['tidal', checks.get('tidal') === true],
+              ['deezer', checks.get('deezer') === true],
+              ['ffmpeg', checks.get('ffmpeg') === true],
+            ];
+            const failing = items.filter(([, ok]) => !ok).map(([n]) => n);
+            const lines = ['## Post-deploy health', ...items.map(([n, ok]) => '- ' + n + ': ' + (ok ? 'ok' : 'degraded'))];
+            require('fs').appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
+            if (failing.length) console.log('::warning title=Post-deploy health degraded::' + failing.join(', '));
+          " "$HEALTH"
