@@ -45,7 +45,7 @@ jobs:
         run: pnpm test:browsers
 
       - name: Run smoke tests
-        run: pnpm exec playwright test
+        run: pnpm exec playwright test --config playwright.config.ts tests/e2e/
 
   deploy:
     needs: validate
