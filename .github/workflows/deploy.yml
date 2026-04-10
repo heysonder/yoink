@@ -55,11 +55,11 @@ jobs:
         uses: useblacksmith/build-push-action@v2
         with:
           context: .
-          load: true
           tags: yoink:latest
+          outputs: type=docker,dest=/tmp/yoink-image.tar
 
       - name: Package image
-        run: docker save yoink:latest | gzip -1 > yoink-image.tar.gz
+        run: gzip -1 < /tmp/yoink-image.tar > yoink-image.tar.gz
 
       - name: Setup SSH
         run: |
@@ -78,16 +78,17 @@ jobs:
           SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
           VPS_HOST: ${{ secrets.VPS_HOST }}
 
-      - name: Upload image to VPS
-        run: scp yoink-image.tar.gz vps:/tmp/yoink-image.tar.gz
+      - name: Stream image to VPS
+        run: ssh -T vps 'cat > /tmp/yoink-image.tar.gz' < yoink-image.tar.gz
 
       - name: Deploy on VPS
+        id: deploy
         run: |
-          ssh vps bash <<'DEPLOY'
+          if ssh -T vps bash <<'DEPLOY'
           set -euo pipefail
           cd /root/services/yoink
-          git pull origin main > /dev/null 2>&1
-          docker load < /tmp/yoink-image.tar.gz
+          git pull origin main
+          gunzip -c /tmp/yoink-image.tar.gz | docker load
           rm -f /tmp/yoink-image.tar.gz
           docker compose up -d --no-build --remove-orphans
 
@@ -99,37 +100,37 @@ jobs:
             fi
             sleep 5
           done
+
           echo "health check failed after 60s" >&2
           exit 1
           DEPLOY
+          then
+            echo "health=ok" >> "$GITHUB_OUTPUT"
+          else
+            echo "health=failed" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+      - name: Capture VPS diagnostics
+        if: failure()
+        run: |
+          ssh -T vps bash <<'DIAG'
+          set +e
+          cd /root/services/yoink || exit 0
+          echo "== docker compose ps =="
+          docker compose ps
+          echo
+          echo "== recent yoink logs =="
+          docker compose logs --tail=80 yoink
+          DIAG
 
       - name: Post-deploy health summary
         if: always()
         run: |
-          ssh vps 'curl -fsS http://127.0.0.1:3000/api/health > /tmp/yoink-health.json 2>/dev/null' || true
-          scp vps:/tmp/yoink-health.json health.json 2>/dev/null || true
-
-          if [ ! -s health.json ]; then
-            echo "## Post-deploy health" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Post-deploy health" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.deploy.outputs.health }}" = "ok" ]; then
+            echo "- app: ok" >> "$GITHUB_STEP_SUMMARY"
+          else
             echo "- app: unreachable" >> "$GITHUB_STEP_SUMMARY"
             echo "::warning title=Post-deploy health::Could not reach health endpoint"
-            exit 0
           fi
-
-          node -e "
-            const health = JSON.parse(require('fs').readFileSync('health.json', 'utf8'));
-            const checks = new Map((health.checks || []).map(c => [c.name, c.ok]));
-            const items = [
-              ['app', health.status === 'ok'],
-              ['spotify', checks.get('spotify') === true],
-              ['youtube/piped', checks.get('piped') === true],
-              ['tidal', checks.get('tidal') === true],
-              ['deezer', checks.get('deezer') === true],
-              ['ffmpeg', checks.get('ffmpeg') === true],
-            ];
-            const failing = items.filter(([, ok]) => !ok).map(([n]) => n);
-            const lines = ['## Post-deploy health', ...items.map(([n, ok]) => '- ' + n + ': ' + (ok ? 'ok' : 'degraded'))];
-            require('fs').appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
-            if (failing.length) console.log('::warning title=Post-deploy health degraded::' + failing.join(', '));
-          "
-          ssh vps 'rm -f /tmp/yoink-health.json' 2>/dev/null || true
