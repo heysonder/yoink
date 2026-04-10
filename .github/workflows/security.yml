@@ -4,7 +4,6 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    # Run weekly on Monday at 9am UTC
     - cron: "0 9 * * 1"
   workflow_dispatch:
 
@@ -15,21 +14,20 @@ jobs:
   audit:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 5
-    env:
     steps:
       - name: Check out code
         uses: actions/checkout@v5
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          version: 10.29.1
 
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: pnpm
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v5
-        with:
-          version: 10.29.1
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
