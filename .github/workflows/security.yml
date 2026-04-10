@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v5
