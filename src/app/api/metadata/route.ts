@@ -177,7 +177,8 @@ function cacheTrackForPrepare(url: string, response: unknown) {
   const obj = response as Record<string, unknown>;
   if (obj.type !== "track") return;
 
-  const { type: _, _youtubeId: _y, _originalPlatform: _p, ...trackFields } = obj;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { type: _type, _youtubeId, _originalPlatform, ...trackFields } = obj;
   setCache(url, trackFields as unknown as TrackInfo);
 }
 

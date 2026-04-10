@@ -3,7 +3,6 @@
 import Link from "next/link";
 
 export default function AppError({
-  error,
   reset,
 }: {
   error: Error & { digest?: string };
