@@ -17,6 +17,10 @@ const STORAGE_KEY = "yoink:feedback-tracking";
 const MAX_TRACKED_REPORTS = 10;
 const STORAGE_EVENT = "yoink-feedback-tracking-changed";
 
+interface WriteOptions {
+  emit?: boolean;
+}
+
 function hasStorage(): boolean {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 }
@@ -58,10 +62,12 @@ function readRawEntries(): TrackedFeedbackEntry[] {
   }
 }
 
-function writeRawEntries(entries: TrackedFeedbackEntry[]) {
+function writeRawEntries(entries: TrackedFeedbackEntry[], options?: WriteOptions) {
   if (!hasStorage()) return;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries.slice(0, MAX_TRACKED_REPORTS)));
-  window.dispatchEvent(new Event(STORAGE_EVENT));
+  if (options?.emit !== false) {
+    window.dispatchEvent(new Event(STORAGE_EVENT));
+  }
 }
 
 export function getTrackedFeedbackEventName(): string {
@@ -83,7 +89,7 @@ export function saveTrackedFeedbackTokenWithSeenState(token: string, lastSeenUpd
       token,
       addedAt: new Date().toISOString(),
       lastSeenUpdatedAt,
-      },
+    },
     ...existing,
   ]);
 }
@@ -102,24 +108,30 @@ export function primeTrackedFeedbackStatuses(reports: FeedbackStatusSummary[]) {
     };
   });
 
-  if (changed) writeRawEntries(entries);
+  if (changed) writeRawEntries(entries, { emit: false });
 }
 
 export function markFeedbackStatusesSeen(reports: FeedbackStatusSummary[]) {
   if (!reports.length) return;
 
   const updates = new Map(reports.map((report) => [report.token, report.updatedAt]));
-  const entries = readRawEntries().map((entry) => ({
-    ...entry,
-    lastSeenUpdatedAt: updates.get(entry.token) || entry.lastSeenUpdatedAt,
-  }));
+  let changed = false;
+  const entries = readRawEntries().map((entry) => {
+    const nextUpdatedAt = updates.get(entry.token) || entry.lastSeenUpdatedAt;
+    if (nextUpdatedAt === entry.lastSeenUpdatedAt) return entry;
+    changed = true;
+    return {
+      ...entry,
+      lastSeenUpdatedAt: nextUpdatedAt,
+    };
+  });
 
-  writeRawEntries(entries);
+  if (changed) writeRawEntries(entries, { emit: false });
 }
 
 export function pruneTrackedFeedbackTokens(tokens: string[]) {
   if (!tokens.length) return;
 
   const toRemove = new Set(tokens);
-  writeRawEntries(readRawEntries().filter((entry) => !toRemove.has(entry.token)));
+  writeRawEntries(readRawEntries().filter((entry) => !toRemove.has(entry.token)), { emit: false });
 }
