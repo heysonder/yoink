@@ -57,6 +57,8 @@ export default function FeedbackPage() {
           </p>
           <p className="text-sm text-subtext0/80 leading-relaxed">
             submissions go to a private backlog only the site owner can see.
+            this browser stores an opaque local token so the header can show
+            status updates for reports you submitted here.
             if you add an email, we&apos;ll only use it to follow up.
             emails and screenshots are typically deleted after resolution
             unless still needed for an active issue.

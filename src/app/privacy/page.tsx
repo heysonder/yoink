@@ -19,7 +19,7 @@ const sections: Section[] = [
     content: [
       "yoink has no user accounts, no sign-ups, and no analytics scripts. we don't use google analytics, facebook pixel, umami, or any ad-tech tracker.",
       "yoink does not set any cookies. we don't use cookies for tracking, authentication, or any other purpose.",
-      "the only browser-side storage used by the app is a local dismiss flag for the migration banner. it's kept in your browser and never sent to us.",
+      "the only browser-side storage used by the app is a couple of local flags: dismiss states for small notices, plus an opaque feedback-status token if you submit a feedback report and want this browser to show its current Linear status. those values stay in your browser and are not used for ads, analytics, or cross-site tracking.",
     ],
   },
   {
@@ -42,6 +42,7 @@ const sections: Section[] = [
     content: [
       "if you use the in-app feedback form, we collect the report fields you submit: type, title, description, and optionally your email address and screenshot.",
       "feedback submissions are sent to our internal Linear workspace for triage. if you include a screenshot, it is uploaded to Linear's file storage. only the site owner has access to that workspace. don't include passwords, payment details, private messages, or other sensitive personal data in feedback or screenshots.",
+      "if you submit feedback, this browser may also store an opaque local token so it can later ask our server for the current status of that exact report. the token stays on your device, does not identify you across devices, and cannot be used by the browser to read our Linear workspace directly.",
       "we use an optional email address only if we need to follow up about your report. optional contact details and screenshots are kept for up to 90 days after a ticket is resolved, unless we still need them for an active issue. non-sensitive issue text may be kept longer as part of the product backlog and support history.",
       "if you want a feedback submission corrected or deleted, email me@yoinkify.com and we'll handle it manually.",
     ],
@@ -116,7 +117,7 @@ export default function PrivacyPage() {
             the full breakdown.
           </p>
           <p className="text-xs text-overlay0/50">
-            last updated: april 6, 2026
+            last updated: april 12, 2026
           </p>
         </div>
       </section>

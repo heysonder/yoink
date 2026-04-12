@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import { saveTrackedFeedbackToken } from "@/lib/feedback-tracker-client";
 
 
 type ReportType = "bug" | "feature";
@@ -138,6 +139,9 @@ export default function FeedbackForm() {
       }
 
       setImageUploadFailed(data.imageUploadFailed || false);
+      if (typeof data.trackingToken === "string" && data.trackingToken) {
+        saveTrackedFeedbackToken(data.trackingToken);
+      }
       setSubmitted(true);
     } catch {
       setSubmitError("something went wrong. try again.");
@@ -174,6 +178,9 @@ export default function FeedbackForm() {
           {imageUploadFailed
             ? "we got your report (image upload failed). we'll take a look."
             : "we'll take a look."}
+        </p>
+        <p className="text-xs text-overlay0">
+          this browser can now see status updates from the feedback button in the header.
         </p>
         <button
           onClick={resetForm}

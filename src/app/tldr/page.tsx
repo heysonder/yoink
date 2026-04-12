@@ -33,6 +33,7 @@ const sections: RuleSection[] = [
       "application logs use a random request ID for each request that isn't tied to your IP address or identity.",
       "our hosting provider may still generate infrastructure logs such as IP address, timestamp, and status code.",
       "if you send feedback, we receive the fields you submit and any optional email or screenshot you choose to include.",
+      "if you submit feedback, this browser can keep an opaque local token so the header can show that report's current status later on this same device.",
     ],
   },
   {
@@ -82,7 +83,7 @@ export default function RulesPage() {
         <div className="space-y-6 animate-fade-in-up" style={{ opacity: 0 }}>
           <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.28em]">
             <span className="text-lavender font-bold">plain english</span>
-            <span className="text-overlay0/50">last updated april 6, 2026</span>
+            <span className="text-overlay0/50">last updated april 12, 2026</span>
           </div>
           <h1 className="text-5xl sm:text-7xl font-bold leading-[0.94] tracking-tight text-text">
             the short

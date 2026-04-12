@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { LinearClient } from "@linear/sdk";
 import { rateLimit } from "@/lib/ratelimit";
+import { createFeedbackTrackingToken } from "@/lib/feedback-tracking";
+import { getLinearClient } from "@/lib/linear";
 import { getClientIp, getRequestLogId, summarizeTextForLogs } from "@/lib/request-privacy";
 
 const TEAM_KEY = "YK";
 const PROJECT_NAME = "External Feedback Intake + Linear Triage";
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
-
-function getLinearClient(): LinearClient {
-  const apiKey = process.env.LINEAR_API_KEY;
-  if (!apiKey) throw new Error("LINEAR_API_KEY is not configured");
-  return new LinearClient({ apiKey });
-}
 
 export async function POST(request: NextRequest) {
   const logId = getRequestLogId(request);
@@ -149,6 +144,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       imageUploadFailed,
+      trackingToken: issue?.id ? createFeedbackTrackingToken(issue.id) : null,
     });
   } catch (error) {
     console.error("[feedback] error:", error instanceof Error ? error.message : error);
