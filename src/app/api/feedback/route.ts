@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
     const title = formData.get("title") as string | null;
     const description = formData.get("description") as string | null;
     const email = formData.get("email") as string | null;
+    const browserInfo = formData.get("browserInfo") as string | null;
     const image = formData.get("image") as File | null;
 
     // Validate required fields
@@ -123,6 +124,9 @@ export async function POST(request: NextRequest) {
     }
     if (email) {
       body += `\n\n---\n**Reporter email:** ${email}`;
+    }
+    if (browserInfo) {
+      body += `\n\n---\n**Browser info:** \`${browserInfo}\``;
     }
     body += `\n\n---\n*Submitted via yoinkify.com/feedback*`;
 

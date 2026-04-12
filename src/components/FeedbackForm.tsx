@@ -30,6 +30,7 @@ export default function FeedbackForm() {
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [imageUploadFailed, setImageUploadFailed] = useState(false);
+  const [includeBrowserInfo, setIncludeBrowserInfo] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -124,6 +125,7 @@ export default function FeedbackForm() {
       formData.append("title", title.trim());
       formData.append("description", description.trim());
       if (email) formData.append("email", email.trim());
+      if (includeBrowserInfo) formData.append("browserInfo", navigator.userAgent);
       if (image) formData.append("image", image);
 
       const res = await fetch("/api/feedback", { method: "POST", body: formData });
@@ -164,6 +166,7 @@ export default function FeedbackForm() {
     setSubmitError(null);
     setSubmitted(false);
     setImageUploadFailed(false);
+    setIncludeBrowserInfo(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -341,6 +344,22 @@ export default function FeedbackForm() {
         />
         {errors.image && <p className="text-xs text-red">{errors.image}</p>}
       </div>
+
+      {/* Browser info opt-in */}
+      <label className="flex items-start gap-3 cursor-pointer group">
+        <input
+          type="checkbox"
+          checked={includeBrowserInfo}
+          onChange={(e) => setIncludeBrowserInfo(e.target.checked)}
+          className="mt-0.5 accent-lavender cursor-pointer"
+        />
+        <span className="text-sm text-overlay1 group-hover:text-text transition-colors">
+          include browser info
+          <span className="block text-xs text-overlay0 mt-0.5">
+            helps us debug — sends your browser name and version
+          </span>
+        </span>
+      </label>
 
       {/* Submit */}
       <button
