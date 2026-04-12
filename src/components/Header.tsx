@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import FeedbackInboxLink from "@/components/FeedbackInboxLink";
 
 export default function Header() {
   return (
@@ -13,7 +12,7 @@ export default function Header() {
         yoink
       </Link>
       <div className="flex items-center gap-2 text-xs">
-        <FeedbackInboxLink />
+        <Link href="/feedback" className="text-surface2 hover:text-lavender transition-colors duration-200">feedback</Link>
         <span className="text-surface0/60">/</span>
         <a
           href="https://github.com/yoinkify/yoink"

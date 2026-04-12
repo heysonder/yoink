@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { saveTrackedFeedbackToken } from "@/lib/feedback-tracker-client";
+import { saveTrackedFeedbackTokenWithSeenState } from "@/lib/feedback-tracker-client";
 
 
 type ReportType = "bug" | "feature";
@@ -137,10 +137,13 @@ export default function FeedbackForm() {
         }
         return;
       }
-
+      
       setImageUploadFailed(data.imageUploadFailed || false);
       if (typeof data.trackingToken === "string" && data.trackingToken) {
-        saveTrackedFeedbackToken(data.trackingToken);
+        saveTrackedFeedbackTokenWithSeenState(
+          data.trackingToken,
+          typeof data.trackingUpdatedAt === "string" ? data.trackingUpdatedAt : null
+        );
       }
       setSubmitted(true);
     } catch {
@@ -180,7 +183,7 @@ export default function FeedbackForm() {
             : "we'll take a look."}
         </p>
         <p className="text-xs text-overlay0">
-          this browser can now see status updates from the feedback button in the header.
+          this browser can now see status updates from the report updates toggle on this page.
         </p>
         <button
           onClick={resetForm}

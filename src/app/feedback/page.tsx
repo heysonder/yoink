@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Header from "@/components/Header";
 import FeedbackForm from "@/components/FeedbackForm";
+import FeedbackStatusPanel from "@/components/FeedbackStatusPanel";
 
 export const metadata: Metadata = {
   title: "feedback",
@@ -34,6 +35,7 @@ export default function FeedbackPage() {
             found a bug? want a feature? let us know and we&apos;ll
             take a look.
           </p>
+          <FeedbackStatusPanel />
         </div>
       </section>
 
@@ -57,7 +59,7 @@ export default function FeedbackPage() {
           </p>
           <p className="text-sm text-subtext0/80 leading-relaxed">
             submissions go to a private backlog only the site owner can see.
-            this browser stores an opaque local token so the header can show
+            this browser stores an opaque local token so this page can show
             status updates for reports you submitted here.
             if you add an email, we&apos;ll only use it to follow up.
             emails and screenshots are typically deleted after resolution

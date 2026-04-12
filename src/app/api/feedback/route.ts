@@ -145,6 +145,12 @@ export async function POST(request: NextRequest) {
       success: true,
       imageUploadFailed,
       trackingToken: issue?.id ? createFeedbackTrackingToken(issue.id) : null,
+      trackingUpdatedAt:
+        issue?.updatedAt instanceof Date
+          ? issue.updatedAt.toISOString()
+          : typeof issue?.updatedAt === "string"
+            ? issue.updatedAt
+            : null,
     });
   } catch (error) {
     console.error("[feedback] error:", error instanceof Error ? error.message : error);

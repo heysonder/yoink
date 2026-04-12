@@ -73,15 +73,36 @@ export function readTrackedFeedback(): TrackedFeedbackEntry[] {
 }
 
 export function saveTrackedFeedbackToken(token: string) {
+  saveTrackedFeedbackTokenWithSeenState(token, null);
+}
+
+export function saveTrackedFeedbackTokenWithSeenState(token: string, lastSeenUpdatedAt: string | null) {
   const existing = readRawEntries().filter((entry) => entry.token !== token);
   writeRawEntries([
     {
       token,
       addedAt: new Date().toISOString(),
-      lastSeenUpdatedAt: null,
-    },
+      lastSeenUpdatedAt,
+      },
     ...existing,
   ]);
+}
+
+export function primeTrackedFeedbackStatuses(reports: FeedbackStatusSummary[]) {
+  if (!reports.length) return;
+
+  const updates = new Map(reports.map((report) => [report.token, report.updatedAt]));
+  let changed = false;
+  const entries = readRawEntries().map((entry) => {
+    if (entry.lastSeenUpdatedAt || !updates.has(entry.token)) return entry;
+    changed = true;
+    return {
+      ...entry,
+      lastSeenUpdatedAt: updates.get(entry.token) || null,
+    };
+  });
+
+  if (changed) writeRawEntries(entries);
 }
 
 export function markFeedbackStatusesSeen(reports: FeedbackStatusSummary[]) {
