@@ -23,7 +23,7 @@
     "@linear/sdk": "^80.1.0",
     "fflate": "^0.8.2",
     "lucide-react": "^1.8.0",
-    "next": "^16.2.3",
+    "next": "^16.2.4",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
   },
@@ -34,7 +34,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "^16.2.3",
+    "eslint-config-next": "^16.2.4",
     "tailwindcss": "^4.2.2",
     "typescript": "^5",
     "vitest": "^4.1.4"
