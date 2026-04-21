@@ -8,8 +8,11 @@ interface PowSolution {
 }
 
 const DIFFICULTY = 16;
-const MAX_AGE_MS = 60_000; // challenge must be solved within 60s
-const MAX_CLOCK_SKEW_MS = 30_000; // tolerate up to 30s of client clock drift
+// Mobile browsers throttle background tabs, so PoW solves can stretch past a
+// minute when the user switches apps. The replay cache still bounds reuse, so
+// the age window can be generous without weakening the check.
+const MAX_AGE_MS = 300_000;
+const MAX_CLOCK_SKEW_MS = 120_000;
 
 // Track used challenges to prevent replay
 const usedChallenges = new Set<string>();

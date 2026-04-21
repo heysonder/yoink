@@ -13,6 +13,32 @@ import { encodeInBrowser, canUseClientFFmpeg, type FFmpegStatus } from "@/lib/cl
 import { zipSync } from "fflate";
 import { createProofOfWorkSolution } from "@/lib/proof-of-work";
 
+// Each PoW solution can only be used once (server tracks replays). A fresh
+// solve per call, plus a single retry on "verification failed", covers both
+// replay and mobile-tab-throttle failures without user-visible errors.
+async function postWithPow(url: string, body: Record<string, unknown>): Promise<Response> {
+  const send = async () => {
+    const pow = await createProofOfWorkSolution(16);
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...body, pow }),
+    });
+  };
+
+  const first = await send();
+  if (first.status !== 403) return first;
+
+  let shouldRetry = false;
+  try {
+    const data = await first.clone().json();
+    shouldRetry = typeof data?.error === "string" && data.error.toLowerCase().includes("verification failed");
+  } catch {
+    shouldRetry = false;
+  }
+  return shouldRetry ? send() : first;
+}
+
 interface TrackInfo {
   name: string;
   artist: string;
@@ -87,19 +113,11 @@ export default function Home() {
     downloadTriggeredRef.current = false;
 
     try {
-      // Proof-of-work challenge
-      const powSolution = await createProofOfWorkSolution(16);
-
       setState("fetching");
 
-      const res = await fetch("/api/metadata", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url,
-          pow: powSolution,
-          fullMetadata: true,
-        }),
+      const res = await postWithPow("/api/metadata", {
+        url,
+        fullMetadata: true,
       });
 
       if (!res.ok) {
@@ -127,15 +145,12 @@ export default function Home() {
   const downloadTrack = useCallback(async (trackInfo: TrackInfo): Promise<QualityInfo | false> => {
     const trackUrl = trackInfo.spotifyUrl || originalUrl;
     const useClient = canUseClientFFmpeg();
-    const pow = await createProofOfWorkSolution(16);
 
     if (useClient) {
       try {
         setDownloadPhase("Fetching audio...");
-        const res = await fetch("/api/prepare", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: trackUrl, format, genreSource, syncedLyrics, pow }),
+        const res = await postWithPow("/api/prepare", {
+          url: trackUrl, format, genreSource, syncedLyrics,
         });
 
         if (!res.ok) {
@@ -193,10 +208,8 @@ export default function Home() {
     // Server-side fallback
     try {
       if (!useClient) setDownloadPhase("");
-      const res = await fetch("/api/download", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: trackUrl, format, genreSource, syncedLyrics, pow }),
+      const res = await postWithPow("/api/download", {
+        url: trackUrl, format, genreSource, syncedLyrics,
       });
 
       if (!res.ok) {
@@ -252,14 +265,11 @@ export default function Home() {
     setTrackStatuses(new Array(playlist.tracks.length).fill("pending"));
 
     const useClient = canUseClientFFmpeg();
-    const pow = await createProofOfWorkSolution(16);
 
     if (useClient) {
       try {
-        const res = await fetch("/api/prepare-playlist", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: originalUrl, format, genreSource, syncedLyrics, pow }),
+        const res = await postWithPow("/api/prepare-playlist", {
+          url: originalUrl, format, genreSource, syncedLyrics,
         });
 
         if (!res.ok) {
@@ -298,10 +308,8 @@ export default function Home() {
             try {
               const track = playlist.tracks[index];
               const trackUrl = track.spotifyUrl || originalUrl;
-              const fallbackRes = await fetch("/api/download", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ url: trackUrl, format, genreSource, syncedLyrics, pow }),
+              const fallbackRes = await postWithPow("/api/download", {
+                url: trackUrl, format, genreSource, syncedLyrics,
               });
               if (fallbackRes.ok) {
                 const audioFormat = fallbackRes.headers.get("X-Audio-Format") || "mp3";
@@ -436,10 +444,8 @@ export default function Home() {
 
     // Server-side fallback — keep existing logic exactly as-is
     try {
-      const res = await fetch("/api/download-playlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: originalUrl, format, genreSource, syncedLyrics, pow }),
+      const res = await postWithPow("/api/download-playlist", {
+        url: originalUrl, format, genreSource, syncedLyrics,
       });
 
       if (!res.ok) {
