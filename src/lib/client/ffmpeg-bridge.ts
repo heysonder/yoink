@@ -53,7 +53,7 @@ export async function encodeInBrowser(
   metadata: EnvelopeMetadata,
   outputFormat: "mp3" | "flac" | "alac",
   onStatus?: StatusCallback,
-  timeoutMs = 60_000,
+  timeoutMs = 180_000,
 ): Promise<Uint8Array> {
   if (!canUseClientFFmpeg()) {
     throw new Error("Browser does not support client-side ffmpeg");
@@ -63,12 +63,23 @@ export async function encodeInBrowser(
   const id = String(++requestId);
 
   return new Promise<Uint8Array>((resolve, reject) => {
+    // Track the most recent status so timeout errors can explain where it stalled.
+    let lastStatusLabel = "no status received";
+    const startedAt = Date.now();
+
     const timer = setTimeout(() => {
       pending.delete(id);
-      reject(new Error("ffmpeg encoding timed out"));
+      const elapsedSec = Math.round((Date.now() - startedAt) / 1000);
+      console.warn(
+        `[client-ffmpeg] timeout after ${elapsedSec}s — last status: ${lastStatusLabel}`,
+      );
+      reject(new Error(`ffmpeg encoding timed out (last status: ${lastStatusLabel})`));
     }, timeoutMs);
 
     pending.set(id, (status) => {
+      if (status.type === "loading") lastStatusLabel = "loading encoder";
+      else if (status.type === "ready") lastStatusLabel = "encoder ready";
+      else if (status.type === "progress") lastStatusLabel = `progress ${status.percent}%`;
       onStatus?.(status);
       if (status.type === "complete") {
         clearTimeout(timer);

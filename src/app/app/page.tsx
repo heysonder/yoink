@@ -290,7 +290,7 @@ export default function Home() {
               audio, albumArt, metadata,
               format as "mp3" | "flac" | "alac",
               undefined,
-              120_000,
+              180_000,
             );
 
             const extMap: Record<string, string> = { flac: "flac", alac: "m4a", mp3: "mp3" };
