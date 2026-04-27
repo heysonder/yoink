@@ -20,7 +20,7 @@
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
     "@fontsource/jetbrains-mono": "^5.2.8",
-    "@linear/sdk": "^80.1.0",
+    "@linear/sdk": "^82.0.0",
     "fflate": "^0.8.2",
     "lucide-react": "^1.8.0",
     "next": "^16.2.3",
